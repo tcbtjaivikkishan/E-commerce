@@ -1,11 +1,28 @@
-import { Text, View } from "react-native";
+import { View, FlatList } from "react-native";
+import { useSelector } from "react-redux";
 
-export default function Index() {
+import Header from "../src/components/Header";
+import PromoCard from "../src/components/PromoCard";
+import CategoryTabs from "../src/components/CategoryTabs";
+import ProductCard from "../src/components/ProductCard";
+import BottomNav from "../src/components/BottomNav";
+
+export default function Home() {
+  const products = useSelector((state: any) => state.products.list);
+
   return (
-    <View
-      className="flex-1 items-center justify-center bg-red-600 "
-    >
-      <Text className="text-white">this screen.</Text>
+    <View className="flex-1 bg-white pt-10">
+      <Header />
+      <PromoCard />
+      <CategoryTabs />
+
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <ProductCard item={item} />}
+      />
+
+      <BottomNav />
     </View>
   );
 }

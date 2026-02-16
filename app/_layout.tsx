@@ -6,7 +6,11 @@ import "../global.css";
 export default function RootLayout() {
   return (
       <Provider store={store}>
-        <Stack />;
+        <Stack 
+          screenOptions={{
+            headerShown: false,
+          }}
+        />;
       </Provider>
   );
 }
