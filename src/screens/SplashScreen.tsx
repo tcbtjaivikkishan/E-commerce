@@ -89,7 +89,7 @@ export default function SplashScreen() {
   };
 
   const goHome = () => handleNavigate("/home");
-  const goLogin = () => handleNavigate("/home"); // later change to "/login"
+  const goLogin = () => handleNavigate("/login"); // later change to "/login"
 
   if (isNavigating) return <Loader />;
 
