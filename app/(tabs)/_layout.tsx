@@ -1,13 +1,17 @@
 import { Tabs } from "expo-router";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppSelector } from "../../src/hooks/redux";
 import { selectTotalItems } from "../../src/store/cartSlice";
 
-function CartIcon() {
+/* 🔥 Cart Icon with Badge */
+function CartIcon({ color }: { color: string }) {
   const totalItems = useAppSelector(selectTotalItems);
+
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ fontSize: 22 }}>🛒</Text>
+      <Ionicons name="cart-outline" size={24} color={color} />
+
       {totalItems > 0 && (
         <View
           style={{
@@ -25,9 +29,7 @@ function CartIcon() {
             borderColor: "#fff",
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>
-            {totalItems > 99 ? "99+" : totalItems}
-          </Text>
+          <Ionicons name="ellipse" size={0} color="transparent" />
         </View>
       )}
     </View>
@@ -39,41 +41,73 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#0F7B3C",
-        tabBarInactiveTintColor: "#9A9A9A",
+        tabBarShowLabel: false,
+
+        /* 🔥 FOOTER STYLE (MATCH YOUR IMAGE) */
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopWidth: 1,
-          borderTopColor: "#EFEFEF",
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
+          position: "absolute",
+          height: 70,
+          backgroundColor: "#fff",
+          borderTopWidth: 0,
+          borderRadius: 25,
+          marginHorizontal: 10,
+          marginBottom: 10,
+          elevation: 10,
         },
       }}
     >
+      {/* 🏠 HOME */}
       <Tabs.Screen
         name="home"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 22 }}>🏠</Text>
-            </View>
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={26}
+              color={focused ? "#0F7B3C" : "#444"}
+            />
           ),
         }}
       />
+
+      {/* 🛒 CART */}
       <Tabs.Screen
         name="cart"
         options={{
-          title: "Cart",
-          tabBarIcon: ({ color }) => (
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 22 }}>🛒</Text>
-            </View>
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "cart" : "cart-outline"}
+              size={26}
+              color={focused ? "#0F7B3C" : "#444"}
+            />
+          ),
+        }}
+      />
+
+      {/* ⬜ CATEGORIES (grid icon) */}
+      <Tabs.Screen
+        name="categories"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <MaterialIcons
+              name="grid-view"
+              size={26}
+              color={focused ? "#0F7B3C" : "#444"}
+            />
+          ),
+        }}
+      />
+
+      {/* 📦 ORDERS (printer-like icon) */}
+      <Tabs.Screen
+        name="orders"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <MaterialIcons
+              name="receipt-long"
+              size={26}
+              color={focused ? "#0F7B3C" : "#444"}
+            />
           ),
         }}
       />
