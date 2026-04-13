@@ -26,54 +26,60 @@ import {
 /* ─── Empty Cart ─── */
 function EmptyCart() {
   return (
-    <View style={{ flex: 1 }}>
-      <View
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 24,
+        marginBottom: 60,
+      }}
+    >
+      <Image
+        source={require("@/assets/images/shopping-cart.png")}
         style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          paddingHorizontal: 24,
+          width: 170,
+          height: 170,
+          marginBottom: 24,
+        }}
+        resizeMode="contain"
+      />
+
+      <Text
+        style={{
+          fontSize: 20,
+          fontWeight: "800",
+          color: "#111",
+          marginBottom: 8,
         }}
       >
-        <Image
-          source={require("@/assets/images/shopping-cart.png")}
-          style={{
-            width: 170,
-            height: 170,
-            marginBottom: 90,
-          }}
-          resizeMode="contain"
-        />
+        Empty Cart
+      </Text>
 
-        <Text style={{ fontSize: 20, fontWeight: "800", color: "#111", marginBottom: 8 }}>
-          Empty Cart
+      <Text
+        style={{
+          fontSize: 13,
+          color: "#777",
+          textAlign: "center",
+          marginBottom: 32,
+        }}
+      >
+        There are no items to show up here{"\n"}add items to buy.
+      </Text>
+
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#0F7B3C",
+          paddingHorizontal: 28,
+          paddingVertical: 14,
+          borderRadius: 12,
+        }}
+        onPress={() => router.push("/home")}
+      >
+        <Text style={{ color: "#fff", fontWeight: "bold" }}>
+          Start Shopping
         </Text>
-
-        <Text
-          style={{
-            fontSize: 13,
-            color: "#777",
-            textAlign: "center",
-            marginBottom: 20,
-          }}
-        >
-          There are no items to show up here{"\n"}add items to buy.
-        </Text>
-
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#0F7B3C",
-            paddingHorizontal: 28,
-            paddingVertical: 14,
-            borderRadius: 12,
-          }}
-          onPress={() => router.push("/home")}
-        >
-          <Text style={{ color: "#fff", fontWeight: "bold" }}>
-            Start Shopping
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -86,8 +92,16 @@ function CartItemRow({ item }: { item: { product: any; qty: number } }) {
 
   const pulse = () =>
     Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.96, duration: 60, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.96,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 60,
+        useNativeDriver: true,
+      }),
     ]).start();
 
   return (
@@ -153,10 +167,11 @@ export default function CartScreen() {
   const isEmpty = cartItems.length === 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F5F5F5]">
+    // ✅ KEY FIX: use style instead of className for flex-1 on SafeAreaView
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F5F5" }}>
       <StatusBar barStyle="light-content" backgroundColor="#0F7B3C" />
 
-      {/* 🔥 HEADER (ADDED BACK HERE) */}
+      {/* HEADER */}
       <View
         style={{
           backgroundColor: "#0F7B3C",
@@ -167,14 +182,16 @@ export default function CartScreen() {
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View>
-            <Text style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}>
+            <Text
+              style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}
+            >
               Jaivik Mart
             </Text>
             <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold" }}>
               2–3 days
             </Text>
             <Text style={{ color: "#fff", fontSize: 12 }}>
-              HOME - Ranaji, Jabalpur ▼
+              HOME - Ranjhi, Jabalpur ▼
             </Text>
           </View>
 
@@ -204,22 +221,45 @@ export default function CartScreen() {
         </View>
       </View>
 
+      {/* ✅ KEY FIX: wrap EmptyCart in flex:1 View so it knows its height */}
       {isEmpty ? (
-        <EmptyCart />
+        <View style={{ flex: 1 }}>
+          <EmptyCart />
+        </View>
       ) : (
         <>
-          <ScrollView>
+          <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 80 }}>
             {cartItems.map((item) => (
               <CartItemRow key={item.product.id} item={item} />
             ))}
           </ScrollView>
 
           {/* Footer */}
-          <View className="absolute bottom-0 left-0 right-0 bg-white flex-row justify-between p-4">
-            <Text className="text-lg font-extrabold">₹{total}</Text>
+          <View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: "#fff",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              padding: 16,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: "800" }}>₹{total}</Text>
 
-            <TouchableOpacity className="bg-[#0F7B3C] px-5 py-3 rounded-xl">
-              <Text className="text-white font-bold">Checkout →</Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#0F7B3C",
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                Checkout →
+              </Text>
             </TouchableOpacity>
           </View>
         </>
