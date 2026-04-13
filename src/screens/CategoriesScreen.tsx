@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   dropdownArrow: { color: "#FFFFFF", fontSize: 11, opacity: 0.8 },
-  avatarBtn: { marginTop: 2 },
+  avatarBtn: { marginTop: 10 },
   avatarCircle: {
     width: 40,
     height: 40,
