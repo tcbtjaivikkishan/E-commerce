@@ -1,37 +1,49 @@
 import { Tabs } from "expo-router";
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useAppSelector } from "../../src/hooks/redux";
-import { selectTotalItems } from "../../src/store/cartSlice";
 
-/* 🔥 Cart Icon with Badge */
-function CartIcon({ color }: { color: string }) {
-  const totalItems = useAppSelector(selectTotalItems);
-
+function TabItem({
+  focused,
+  icon,
+  label,
+}: {
+  focused: boolean;
+  icon: React.ReactNode;
+  label: string;
+}) {
   return (
-    <View style={{ alignItems: "center", justifyContent: "center" }}>
-      <Ionicons name="cart-outline" size={24} color={color} />
+    <View
+      style={{
+        alignItems: "center",
+        justifyContent: "center",
+        flex: 1,
+      }}
+    >
+      <View
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: 6,
+          paddingHorizontal: 16,
+          borderRadius: 25,
+          backgroundColor: focused ? "#E8F5E9" : "transparent",
+          minWidth: 70, // 🔥 keeps pill balanced
+        }}
+      >
+        {icon}
 
-      {totalItems > 0 && (
-        <View
+        <Text
           style={{
-            position: "absolute",
-            top: -4,
-            right: -8,
-            backgroundColor: "#DC2626",
-            borderRadius: 10,
-            minWidth: 18,
-            height: 18,
-            alignItems: "center",
-            justifyContent: "center",
-            paddingHorizontal: 4,
-            borderWidth: 1.5,
-            borderColor: "#fff",
+            fontSize: 11,
+            marginTop: 2,
+            fontWeight: "600",
+            textAlign: "center",
+            color: focused ? "#0F7B3C" : "#444",
           }}
         >
-          <Ionicons name="ellipse" size={0} color="transparent" />
-        </View>
-      )}
+          {label}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -41,72 +53,104 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
 
-        /* 🔥 FOOTER STYLE (MATCH YOUR IMAGE) */
         tabBarStyle: {
           position: "absolute",
-          height: 70,
-          backgroundColor: "#fff",
+          bottom: 15,
+          left: 15,
+          right: 15,
+          height: 75,
+          backgroundColor: "rgba(255,255,255,0.95)",
+          borderRadius: 40,
           borderTopWidth: 0,
-          borderRadius: 25,
-          marginHorizontal: 10,
-          marginBottom: 10,
           elevation: 10,
+
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 10,
         },
       }}
     >
-      {/* 🏠 HOME */}
+      {/* HOME */}
       <Tabs.Screen
         name="home"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={26}
-              color={focused ? "#0F7B3C" : "#444"}
+          tabBarLabel: "",
+          tabBarIcon: ({ focused }) => (
+            <TabItem
+              focused={focused}
+              label="Home"
+              icon={
+                <Ionicons
+                  name="home"
+                  size={22}
+                  color={focused ? "#0F7B3C" : "#444"}
+                />
+              }
             />
           ),
         }}
       />
 
-      {/* 🛒 CART */}
+      {/* CART */}
       <Tabs.Screen
         name="cart"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "cart" : "cart-outline"}
-              size={26}
-              color={focused ? "#0F7B3C" : "#444"}
+          tabBarLabel: "",
+          tabBarIcon: ({ focused }) => (
+            <TabItem
+              focused={focused}
+              label="Order Again"
+              icon={
+                <Ionicons
+                  name="cart-outline"
+                  size={22}
+                  color={focused ? "#0F7B3C" : "#444"}
+                />
+              }
             />
           ),
         }}
       />
 
-      {/* ⬜ CATEGORIES (grid icon) */}
+      {/* CATEGORIES */}
       <Tabs.Screen
         name="categories"
         options={{
+          tabBarLabel: "",
           tabBarIcon: ({ focused }) => (
-            <MaterialIcons
-              name="grid-view"
-              size={26}
-              color={focused ? "#0F7B3C" : "#444"}
+            <TabItem
+              focused={focused}
+              label="Categories"
+              icon={
+                <MaterialIcons
+                  name="grid-view"
+                  size={22}
+                  color={focused ? "#0F7B3C" : "#444"}
+                />
+              }
             />
           ),
         }}
       />
 
-      {/* 📦 ORDERS (printer-like icon) */}
+      {/* ORDERS */}
       <Tabs.Screen
         name="orders"
         options={{
+          tabBarLabel: "",
           tabBarIcon: ({ focused }) => (
-            <MaterialIcons
-              name="receipt-long"
-              size={26}
-              color={focused ? "#0F7B3C" : "#444"}
+            <TabItem
+              focused={focused}
+              label="Order"
+              icon={
+                <MaterialIcons
+                  name="receipt-long"
+                  size={22}
+                  color={focused ? "#0F7B3C" : "#444"}
+                />
+              }
             />
           ),
         }}

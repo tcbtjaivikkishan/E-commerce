@@ -32,7 +32,7 @@ function EmptyCart() {
         justifyContent: "center",
         alignItems: "center",
         paddingHorizontal: 24,
-        marginBottom: 60,
+        marginBottom: 60, // ✅ FIXED (important for visual centering)
       }}
     >
       <Image
@@ -167,7 +167,8 @@ export default function CartScreen() {
   const isEmpty = cartItems.length === 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F5F5F5]">
+    // ✅ FIXED: use style instead of className
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F5F5" }}>
       <StatusBar barStyle="light-content" backgroundColor="#0F7B3C" />
 
       {/* HEADER */}
@@ -188,9 +189,7 @@ export default function CartScreen() {
           }}
         >
           <View>
-            <Text
-              style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}
-            >
+            <Text style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}>
               Jaivik Mart
             </Text>
             <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold" }}>
@@ -226,16 +225,13 @@ export default function CartScreen() {
         </View>
       </View>
 
-      {/* ✅ KEY FIX: wrap EmptyCart in flex:1 View so it knows its height */}
       {isEmpty ? (
         <View style={{ flex: 1 }}>
           <EmptyCart />
         </View>
       ) : (
         <>
-          <ScrollView
-            contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
-          >
+          <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 80 }}>
             {cartItems.map((item) => (
               <CartItemRow key={item.product.id} item={item} />
             ))}

@@ -135,9 +135,16 @@ export default function LoginScreen() {
   };
 
   const handleVerifyOTP = () => {
+<<<<<<< HEAD
     if (otp.length < 4) {
       Alert.alert("Error", "Enter the 4-digit OTP");
       return;
+=======
+    if (otp === "1234") {
+      router.replace("/home");
+    } else {
+      Alert.alert("Invalid OTP");
+>>>>>>> 97e30f6 (cartscreen, footer tab, homescreen corrected)
     }
     setLoading(true);
     setTimeout(() => {

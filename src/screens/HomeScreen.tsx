@@ -116,7 +116,7 @@ export default function HomeScreen() {
         </ScrollView>
       </ScrollView>
 
-      {/* ── BLINKIT-STYLE FOOTER ── */}
+      {/* FOOTER */}
       <View style={styles.footerWrapper}>
         <View style={styles.footer}>
           {TABS.map((tab) => {
@@ -128,19 +128,27 @@ export default function HomeScreen() {
                 style={styles.tab}
                 activeOpacity={0.7}
               >
-                {/* Active tab gets a green pill behind the icon */}
                 <View
-                  style={[styles.iconWrap, active && styles.iconWrapActive]}
+                  style={[
+                    styles.iconWrap,
+                    active && styles.iconWrapActive,
+                  ]}
                 >
                   <Text
-                    style={[styles.tabIcon, active && styles.tabIconActive]}
+                    style={[
+                      styles.tabIcon,
+                      active && styles.tabIconActive,
+                    ]}
                   >
                     {tab.icon}
                   </Text>
                 </View>
 
                 <Text
-                  style={[styles.tabLabel, active && styles.tabLabelActive]}
+                  style={[
+                    styles.tabLabel,
+                    active && styles.tabLabelActive,
+                  ]}
                 >
                   {tab.label}
                 </Text>
@@ -156,11 +164,25 @@ export default function HomeScreen() {
 /* PRODUCT CARD */
 function ProductCard({ p, add, remove, getQty, toggle, isWishlisted }) {
   return (
-    <TouchableOpacity style={styles.card}>
-      <TouchableOpacity style={styles.wishlist}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.8}
+      onPress={() =>
+        router.push({
+          pathname: "/product",
+          params: { id: p.id },
+        })
+      }
+    >
+      {/* Wishlist */}
+      <TouchableOpacity
+        style={styles.wishlist}
+        onPress={() => toggle(p.id)}
+      >
         <Text>{isWishlisted(p.id) ? "❤️" : "🤍"}</Text>
       </TouchableOpacity>
 
+      {/* Image */}
       <Image source={{ uri: p.image }} style={styles.img} />
 
       <View style={{ flex: 1 }}>
@@ -176,15 +198,25 @@ function ProductCard({ p, add, remove, getQty, toggle, isWishlisted }) {
         </Text>
       </View>
 
+      {/* ADD / STEPPER */}
       {getQty(p.id) === 0 ? (
-        <TouchableOpacity style={styles.addBtn}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => add(p.id)}
+        >
           <Text style={styles.addText}>ADD</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.stepper}>
-          <Text style={styles.stepText}>−</Text>
+          <TouchableOpacity onPress={() => remove(p.id)}>
+            <Text style={styles.stepText}>−</Text>
+          </TouchableOpacity>
+
           <Text style={styles.qty}>{getQty(p.id)}</Text>
-          <Text style={styles.stepText}>+</Text>
+
+          <TouchableOpacity onPress={() => add(p.id)}>
+            <Text style={styles.stepText}>+</Text>
+          </TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
@@ -260,6 +292,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
+    zIndex: 10,
   },
 
   img: {
@@ -303,10 +336,10 @@ const styles = StyleSheet.create({
     padding: 6,
   },
 
-  stepText: { color: "#fff" },
-  qty: { color: "#fff" },
+  stepText: { color: "#fff", fontSize: 16 },
 
-  /* ── BLINKIT-STYLE FOOTER STYLES ── */
+  qty: { color: "#fff", fontWeight: "bold" },
+
   footerWrapper: {
     position: "absolute",
     bottom: 16,
@@ -318,19 +351,10 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    alignSelf: "center",
     borderRadius: 28,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    justifyContent: "center",
     alignItems: "center",
-    gap: 4,
-    // shadow for iOS
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    // shadow for Android
     elevation: 12,
   },
 
@@ -349,15 +373,11 @@ const styles = StyleSheet.create({
   },
 
   iconWrapActive: {
-    backgroundColor: "#E8F5E9", // soft green pill — exactly like Blinkit
+    backgroundColor: "#E8F5E9",
   },
 
   tabIcon: {
     fontSize: 30,
-  },
-
-  tabIconActive: {
-    // emoji colour can't be changed but the pill bg signals active state
   },
 
   tabLabel: {
