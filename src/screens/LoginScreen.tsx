@@ -1,7 +1,7 @@
-import { router } from "expo-router";
-
+import { loginSuccess } from "@/src/store/userSlice";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-
 import {
   Alert,
   Animated,
@@ -14,173 +14,235 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useDispatch } from "react-redux";
 
 const { width } = Dimensions.get("window");
 
-/* 🔹 Images */
+const SCALE = width / 375;
+const CARD_W = Math.round(110 * SCALE);
+const CARD_H = Math.round(121 * SCALE);
+const CARD_GAP = Math.round(8 * SCALE);
+const ITEM_WIDTH = CARD_W + CARD_GAP;
 
 const images = [
   require("@/assets/image/product1.png"),
-
   require("@/assets/image/product2.png"),
-
   require("@/assets/image/product3.png"),
-
   require("@/assets/image/product4.png"),
-
   require("@/assets/image/product5.png"),
-
   require("@/assets/image/product6.png"),
-
   require("@/assets/image/product7.png"),
-
   require("@/assets/image/product8.png"),
-
   require("@/assets/image/product9.png"),
-
   require("@/assets/image/product10.png"),
-
   require("@/assets/image/product11.png"),
-
   require("@/assets/image/product13.png"),
-
   require("@/assets/image/product14.png"),
-
   require("@/assets/image/product15.png"),
-
   require("@/assets/image/product16.png"),
 ];
 
-/* 🔹 Animated Row Component */
-
-const ImageRow = ({ images, reverse = false }) => {
-  const translateX = useRef(new Animated.Value(0)).current;
+// ─── Image Row ────────────────────────────────────────────────────────────────
+const ImageRow = ({
+  rowImages,
+  reverse = false,
+  rowOpacity = 1,
+}: {
+  rowImages: any[];
+  reverse?: boolean;
+  rowOpacity?: number;
+}) => {
+  const totalWidth = rowImages.length * ITEM_WIDTH;
+  const translateX = useRef(
+    new Animated.Value(reverse ? -totalWidth : 0)
+  ).current;
 
   useEffect(() => {
-    Animated.loop(
+    const animate = () => {
+      translateX.setValue(reverse ? -totalWidth : 0);
       Animated.timing(translateX, {
-        toValue: reverse ? width : -width,
-
-        duration: 12000,
-
+        toValue: reverse ? 0 : -totalWidth,
+        duration: 15000,
         useNativeDriver: true,
-      }),
-    ).start();
+      }).start(({ finished }) => {
+        if (finished) animate();
+      });
+    };
+    animate();
   }, []);
 
-  return (
-    <View style={{ height: 110, overflow: "hidden" }}>
-      <Animated.View
-        style={{
-          flexDirection: "row",
+  const tripled = [...rowImages, ...rowImages, ...rowImages];
 
-          transform: [{ translateX }],
-        }}
-      >
-        {[...images, ...images].map((img, i) => (
-          <Image
+  return (
+    <View style={{ height: CARD_H + CARD_GAP, overflow: "hidden", opacity: rowOpacity }}>
+      <Animated.View style={{ flexDirection: "row", transform: [{ translateX }] }}>
+        {tripled.map((img, i) => (
+          <View
             key={i}
-            source={img}
-            style={styles.image}
-            resizeMode="contain"
-          />
+            style={{
+              width: CARD_W,
+              height: CARD_H,
+              marginRight: CARD_GAP,
+              marginVertical: CARD_GAP / 2,
+              borderRadius: Math.round(25 * SCALE),
+              backgroundColor: "#F7F9FA",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 10,
+            }}
+          >
+            <Image
+              source={img}
+              style={{ width: Math.round(63 * SCALE), height: Math.round(95 * SCALE) }}
+              resizeMode="contain"
+            />
+          </View>
         ))}
       </Animated.View>
     </View>
   );
 };
 
+// Web only: remove autofill outline globally
+if (typeof document !== "undefined") {
+  const s = document.createElement("style");
+  s.textContent = `input { outline: none !important; background: transparent !important; }`;
+  document.head.appendChild(s);
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function LoginScreen() {
   const [phone, setPhone] = useState("");
-
   const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const params = useLocalSearchParams<{ redirect?: string }>();
 
-  const [step, setStep] = useState("phone");
+  const ROW_H = CARD_H + CARD_GAP;
 
-  const handleLogin = () => {
+  const handleSendOtp = () => {
     if (phone.length < 10) {
-      Alert.alert("Error", "Enter valid phone number");
-
+      Alert.alert("Error", "Enter a valid 10-digit phone number");
       return;
     }
-
-    Alert.alert("OTP Sent", "Use 1234 as OTP");
-
-    setStep("otp");
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      Alert.alert("OTP Sent", "Use 1234 as OTP (mock)");
+      setStep("otp");
+    }, 800);
   };
 
   const handleVerifyOTP = () => {
-    if (otp === "1234") {
-      router.replace("/");
-    } else {
-      Alert.alert("Invalid OTP");
+    if (otp.length < 4) {
+      Alert.alert("Error", "Enter the 4-digit OTP");
+      return;
     }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      if (otp === "1234") {
+        dispatch(loginSuccess({ phone: `+91${phone}`, isLoggedIn: true }));
+        const redirect = (params.redirect as string) || "/home";
+        router.replace(redirect as any);
+      } else {
+        Alert.alert("Invalid OTP", "Please try again");
+      }
+    }, 800);
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* 🔥 Animated Background */}
-
-      <View style={{ marginTop: 40 }}>
-        <ImageRow images={images.slice(0, 4)} reverse={false} />
-
-        <ImageRow images={images.slice(4, 8)} reverse={true} />
-
-        <ImageRow images={images.slice(8, 12)} reverse={false} />
-
-        <ImageRow images={images.slice(0, 4)} reverse={true} />
-
-        {/* Logo */}
-
-        <View style={styles.logo} />
+      {/* 4 scrolling rows */}
+      <View>
+        <ImageRow rowImages={images.slice(0, 5)} reverse={false} rowOpacity={1} />
+        <ImageRow rowImages={images.slice(5, 10)} reverse={true} rowOpacity={1} />
+        <ImageRow rowImages={images.slice(10, 15)} reverse={false} rowOpacity={1} />
+        <ImageRow rowImages={images.slice(0, 5)} reverse={true} rowOpacity={0.75} />
       </View>
 
-      {/* 🔹 Bottom Overlay */}
+      {/* Fade gradient */}
+      <LinearGradient
+        colors={["transparent", "rgba(255,255,255,0.6)", "#ffffff"]}
+        locations={[0, 0.5, 1]}
+        style={{
+          position: "absolute",
+          top: ROW_H * 2,
+          left: 0,
+          right: 0,
+          height: ROW_H * 2 + 10,
+        }}
+        pointerEvents="none"
+      />
 
-      <View style={styles.overlay}>
-        <Text style={styles.title}>India’s Leading Organic Brand</Text>
+      {/* Bottom sheet */}
+      <View style={styles.sheet}>
+        <View style={styles.logoWrapper}>
+          <View style={styles.logo} />
+        </View>
 
-        <Text style={styles.subtitle}>Log in or Sign Up</Text>
+        <Text style={styles.title}>India's Leading Organic Brand</Text>
+        <Text style={styles.subtitle}>Log In or Sign Up</Text>
 
         {step === "phone" ? (
           <>
-            <View style={styles.inputBox}>
+            <View style={styles.inputRow}>
               <Text style={styles.countryCode}>+91</Text>
-
               <TextInput
                 placeholder="Enter phone number"
-                keyboardType="phone-pad"
+                placeholderTextColor="#bbb"
+                keyboardType="numeric"
                 style={styles.input}
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ""))}
+                maxLength={10}
+                autoComplete="off"
+                autoCorrect={false}
               />
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>Login</Text>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSendOtp}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? "Sending..." : "Login"}
+              </Text>
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <Text style={styles.otpText}>Enter OTP sent to +91 {phone}</Text>
-
+            <Text style={styles.otpHint}>Enter OTP sent to +91 {phone}</Text>
             <TextInput
-              placeholder="Enter OTP"
-              keyboardType="number-pad"
+              placeholder="- - - -"
+              placeholderTextColor="#bbb"
+              keyboardType="numeric"
               style={styles.otpInput}
               value={otp}
-              onChangeText={setOtp}
+              onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, ""))}
               maxLength={4}
+              autoComplete="off"
+              autoCorrect={false}
             />
 
-            <TouchableOpacity style={styles.button} onPress={handleVerifyOTP}>
-              <Text style={styles.buttonText}>Verify OTP</Text>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleVerifyOTP}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? "Verifying..." : "Verify OTP"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setStep("phone")}>
-              <Text style={styles.resend}>Change Number</Text>
+              <Text style={styles.changeNumber}>Change Number</Text>
             </TouchableOpacity>
           </>
         )}
@@ -191,162 +253,123 @@ export default function LoginScreen() {
   );
 }
 
-/* 🔹 Styles */
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-
     backgroundColor: "#fff",
   },
-
-  image: {
-    width: 90,
-
-    height: 90,
-
-    margin: 8,
-
-    borderRadius: 14,
-
-    backgroundColor: "#f3f4f6",
-  },
-
-  overlay: {
-    position: "absolute",
-
-    bottom: 0,
-
-    width: "100%",
-
-    backgroundColor: "#fff",
-
-    borderTopLeftRadius: 28,
-
-    borderTopRightRadius: 28,
-
-    padding: 20,
-
-    elevation: 10,
-  },
-
-  title: {
-    fontSize: 18,
-
-    fontWeight: "700",
-
-    textAlign: "center",
-  },
-
-  subtitle: {
-    fontSize: 13,
-
-    color: "#777",
-
-    textAlign: "center",
-
-    marginBottom: 16,
-  },
-
-  inputBox: {
-    flexDirection: "row",
-
+  logoWrapper: {
     alignItems: "center",
-
-    borderWidth: 1,
-
-    borderColor: "#ddd",
-
-    borderRadius: 10,
-
-    paddingHorizontal: 12,
-
-    height: 48,
-
     marginBottom: 14,
+    marginTop: -26,
   },
-
-  countryCode: {
-    fontSize: 16,
-
-    marginRight: 8,
-  },
-
-  input: {
-    flex: 1,
-
-    fontSize: 16,
-  },
-
-  button: {
-    backgroundColor: "#166534",
-
-    paddingVertical: 14,
-
-    borderRadius: 10,
-
-    alignItems: "center",
-  },
-
-  buttonText: {
-    color: "#fff",
-
-    fontSize: 16,
-
-    fontWeight: "600",
-  },
-
-  otpText: {
-    textAlign: "center",
-
-    marginBottom: 10,
-
-    color: "#444",
-  },
-
-  otpInput: {
-    borderWidth: 1,
-
-    borderColor: "#ddd",
-
-    borderRadius: 10,
-
-    height: 48,
-
-    textAlign: "center",
-
-    fontSize: 18,
-
-    marginBottom: 14,
-  },
-
-  resend: {
-    textAlign: "center",
-
-    color: "#16a34a",
-
-    marginTop: 10,
-  },
-
-  altText: {
-    textAlign: "center",
-
-    fontSize: 12,
-
-    color: "#16a34a",
-
-    marginTop: 10,
-  },
-
   logo: {
     width: 50,
-
     height: 50,
-
-    backgroundColor: "green",
-
-    alignSelf: "center",
-
-    marginTop: 15,
+    backgroundColor: "#196F1B",
+    borderRadius: 5,
+  },
+  sheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 28,
+    paddingBottom: 32,
+    flex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
+    color: "#000000",
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 2,
+    marginBottom: 20,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#196F1B",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 45,
+    marginBottom: 14,
+    backgroundColor: "#fff",
+  },
+  countryCode: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111",
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: "#111",
+    backgroundColor: "transparent",
+  },
+  button: {
+    backgroundColor: "#196F1B",
+    height: 45,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonDisabled: {
+    backgroundColor: "#5a9e5c",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  otpHint: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 14,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: "#196F1B",
+    borderRadius: 10,
+    height: 50,
+    textAlign: "center",
+    fontSize: 28,
+    letterSpacing: 12,
+    marginBottom: 14,
+    color: "#111",
+    backgroundColor: "transparent",
+  },
+  changeNumber: {
+    textAlign: "center",
+    color: "#196F1B",
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  altText: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#196F1B",
+    marginTop: 14,
   },
 });
