@@ -1,342 +1,737 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  Share,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { PRODUCTS } from "../constants/data";
-import { C } from "../constants/theme";
-import { useCart } from "../hooks/useCart";
-import { useWishlist } from "../hooks/useWishlist";
+import PRODUCTS_JSON from "../data/products.json";
+import type { TaxPreference } from "./CategoriesScreen";
 
-export default function ProductScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { add, remove, getQty } = useCart();
-  const { isWishlisted, toggle } = useWishlist();
+interface ScreenProduct {
+  item_id?: string;
+  name: string;
+  image_name?: string;
+  image_document_id?: string;
+  image?: string;
+  rate?: number;
+  label_rate?: number;
+  priceRaw?: number;
+  mrp?: number;
+  track_inventory?: boolean;
+  available_stock?: number;
+  stock?: number;
+  item_tax_preferences?: TaxPreference[];
+  category_name?: string;
+  category?: string;
+  description?: string;
+  sku?: string;
+  weight_with_unit?: string;
+  unit?: string;
+  brand?: string;
+  manufacturer?: string;
+  hsn_or_sac?: string;
+  dimensions_with_unit?: string;
+  product_type?: string;
+  is_returnable?: boolean;
+}
 
-  const product = useMemo(() => PRODUCTS.find((p) => p.id === id), [id]);
-  const qty = getQty(id ?? "");
-  const wishlisted = isWishlisted(id ?? "");
+const { width } = Dimensions.get("window");
+
+// ─── Image URL helper ─────────────────────────────────────────────────────────
+const getImageUrl = (product: ScreenProduct): string | null => {
+  if (product.image) return product.image;
+  if (!product.image_document_id || !product.image_name) return null;
+  return `https://cdn2.zohoecommerce.com/product-images/${product.image_name}/${product.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`;
+};
+
+const findProduct = (id: string): ScreenProduct | undefined => {
+  const fromList = PRODUCTS.find((item) => item.id === id);
+  if (fromList) {
+    return {
+      item_id: fromList.id,
+      name: fromList.name,
+      image: fromList.image,
+      rate: fromList.priceRaw,
+      label_rate: fromList.mrp,
+      priceRaw: fromList.priceRaw,
+      mrp: fromList.mrp,
+      track_inventory: true,
+      available_stock: fromList.stock,
+      stock: fromList.stock,
+      item_tax_preferences: [],
+      category_name: fromList.category,
+      description: fromList.description,
+      sku: fromList.sku,
+      weight_with_unit: fromList.unit,
+    };
+  }
+
+  const jsonItems = (PRODUCTS_JSON as { items: ScreenProduct[] }).items ?? [];
+  return jsonItems.find((item) => item.item_id === id);
+};
+
+// ─── Stock Badge ──────────────────────────────────────────────────────────────
+interface StockBadgeProps {
+  stock: number;
+  trackInventory: boolean;
+}
+
+const StockBadge: React.FC<StockBadgeProps> = ({ stock, trackInventory }) => {
+  if (!trackInventory) return null;
+  const inStock = stock > 0;
+  return (
+    <View
+      style={[styles.stockBadge, inStock ? styles.inStock : styles.outOfStock]}
+    >
+      <View
+        style={[
+          styles.stockDot,
+          inStock ? styles.inStockDot : styles.outOfStockDot,
+        ]}
+      />
+      <Text
+        style={[
+          styles.stockText,
+          inStock ? styles.inStockText : styles.outOfStockText,
+        ]}
+      >
+        {inStock ? "In Stock" : "Out of Stock"}
+      </Text>
+    </View>
+  );
+};
+
+// ─── Info Row ─────────────────────────────────────────────────────────────────
+interface InfoRowProps {
+  icon: string;
+  label: string;
+  value: string | null | undefined;
+}
+
+const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => {
+  if (!value) return null;
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoIcon}>{icon}</Text>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+};
+
+// ─── Section Card ─────────────────────────────────────────────────────────────
+interface SectionCardProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+const SectionCard: React.FC<SectionCardProps> = ({ title, children }) => (
+  <View style={styles.sectionCard}>
+    <Text style={styles.sectionCardTitle}>{title}</Text>
+    {children}
+  </View>
+);
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+export default function ProductScreen(): React.JSX.Element {
+  const params = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const productId = params.id ?? "";
+  const product = findProduct(productId);
+
+  const [quantity, setQuantity] = useState<number>(1);
+  const [wishlist, setWishlist] = useState<boolean>(false);
 
   if (!product) {
     return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.errorContainer}>
-          <Text style={s.errorText}>Product not found</Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={s.backLink}>Go Back</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.topNav}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
+            <Text style={styles.navBtnIcon}>←</Text>
           </TouchableOpacity>
+          <Text style={styles.navTitle}>Product Not Found</Text>
+          <View style={styles.navRight} />
+        </View>
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
+          <Text>Unable to load this product.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.green} />
+  const imageUrl: string | null = getImageUrl(product);
+  const inStock: boolean = product.track_inventory
+    ? (product.available_stock ?? 0) > 0
+    : true;
+  const price: number = product.rate ?? product.label_rate ?? 0;
+  const totalPrice: string = (price * quantity).toFixed(2);
+  const taxPreferences = product.item_tax_preferences ?? [];
 
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Text style={s.backBtnText}>←</Text>
+  const intraTax: TaxPreference | undefined = taxPreferences.find(
+    (t) => t.tax_specification === "intra",
+  );
+  const taxPct: number = intraTax?.tax_percentage ?? 0;
+
+  const handleShare = async (): Promise<void> => {
+    try {
+      await Share.share({
+        message: `Check out ${product.name} on Jaivik Mart — ₹${price}`,
+        url: `https://products.tcbtjaivikkisan.com/products/${product.item_id}`,
+      });
+    } catch (_) {}
+  };
+
+  const handleAddToCart = (): void => {
+    Alert.alert(
+      "Added to Cart",
+      `${quantity} × ${product.name} added to your cart.`,
+    );
+  };
+
+  const handleBuyNow = (): void => {
+    Alert.alert(
+      "Order",
+      `Proceeding to checkout for ${quantity} × ${product.name}.`,
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* ── Top Nav ── */}
+      <View style={styles.topNav}>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
+          <Text style={styles.navBtnIcon}>←</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => id && toggle(id)}
-          style={s.wishlistBtn}
-        >
-          <Text style={s.wishlistIcon}>{wishlisted ? "❤️" : "🤍"}</Text>
-        </TouchableOpacity>
+        <Text style={styles.navTitle} numberOfLines={1}>
+          Product Details
+        </Text>
+        <View style={styles.navRight}>
+          <TouchableOpacity style={styles.navBtn} onPress={handleShare}>
+            <Text style={styles.navBtnIcon}>⬆</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={() => setWishlist((w) => !w)}
+          >
+            <Text
+              style={[styles.navBtnIcon, wishlist && styles.wishlistActive]}
+            >
+              {wishlist ? "♥" : "♡"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Product Image */}
-        <View style={s.imageContainer}>
-          <Image source={{ uri: product.image }} style={s.image} />
-          {product.tag && (
-            <View style={[s.tag, { backgroundColor: C.red }]}>
-              <Text style={s.tagText}>{product.tag}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Product Info */}
-        <View style={s.content}>
-          <Text style={s.category}>{product.category.toUpperCase()}</Text>
-          <Text style={s.name}>{product.name}</Text>
-          <Text style={s.unit}>{product.unit}</Text>
-
-          <View style={s.priceRow}>
-            <Text style={s.price}>₹{product.priceRaw}</Text>
-            {product.mrp && (
-              <Text style={s.mrp}>₹{product.mrp}</Text>
-            )}
-            {product.discountPct && (
-              <Text style={s.discount}>{product.discountPct}% OFF</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Product Image ── */}
+        <View style={styles.imageSection}>
+          <View style={styles.imageBox}>
+            {imageUrl ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.productImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderText}>🌿</Text>
+                <Text style={styles.imagePlaceholderLabel}>No Image</Text>
+              </View>
             )}
           </View>
-
-          {product.rating && (
-            <View style={s.ratingRow}>
-              <Text style={s.rating}>⭐ {product.rating}</Text>
+          {product.category_name ? (
+            <View style={styles.categoryPill}>
+              <Text style={styles.categoryPillText}>
+                {product.category_name}
+              </Text>
             </View>
-          )}
+          ) : null}
+        </View>
 
-          <View style={s.divider} />
+        {/* ── Product Header ── */}
+        <View style={styles.productHeader}>
+          <View style={styles.productTitleRow}>
+            <Text style={styles.productName}>{product.name}</Text>
+            <StockBadge
+              stock={product.available_stock ?? 0}
+              trackInventory={product.track_inventory ?? false}
+            />
+          </View>
 
-          <Text style={s.sectionTitle}>Description</Text>
-          <Text style={s.description}>
-            Fresh {product.name.toLowerCase()} delivered straight from local farmers.
-            Best quality guaranteed with our 100% satisfaction policy.
+          {product.brand ? (
+            <Text style={styles.brandText}>by {product.brand}</Text>
+          ) : product.manufacturer ? (
+            <Text style={styles.brandText}>by {product.manufacturer}</Text>
+          ) : null}
+
+          <View style={styles.priceRow}>
+            <Text style={styles.priceMain}>
+              ₹{price.toLocaleString("en-IN")}
+            </Text>
+            {product.label_rate && product.label_rate !== price ? (
+              <Text style={styles.priceMRP}>
+                MRP ₹{product.label_rate.toLocaleString("en-IN")}
+              </Text>
+            ) : null}
+            <View style={styles.taxBadge}>
+              <Text style={styles.taxBadgeText}>
+                {taxPct === 0 ? "0% GST" : `${taxPct}% GST`}
+              </Text>
+            </View>
+          </View>
+
+          {product.sku ? (
+            <Text style={styles.skuText}>SKU: {product.sku}</Text>
+          ) : null}
+        </View>
+
+        {/* ── Quantity Selector ── */}
+        <SectionCard title="Quantity">
+          <View style={styles.qtyRow}>
+            <TouchableOpacity
+              style={[styles.qtyBtn, quantity <= 1 && styles.qtyBtnDisabled]}
+              onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+            >
+              <Text style={styles.qtyBtnText}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.qtyValue}>{quantity}</Text>
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => setQuantity((q) => q + 1)}
+            >
+              <Text style={styles.qtyBtnText}>+</Text>
+            </TouchableOpacity>
+            <View style={styles.qtyTotal}>
+              <Text style={styles.qtyTotalLabel}>Total</Text>
+              <Text style={styles.qtyTotalValue}>
+                ₹{parseFloat(totalPrice).toLocaleString("en-IN")}
+              </Text>
+            </View>
+          </View>
+        </SectionCard>
+
+        {/* ── Delivery Info ── */}
+        <View style={styles.deliveryBanner}>
+          <Text style={styles.deliveryIcon}>🚚</Text>
+          <View style={styles.deliveryTextBox}>
+            <Text style={styles.deliveryTitle}>
+              Estimated Delivery: 2–3 Days
+            </Text>
+            <Text style={styles.deliverySubtitle}>
+              Free delivery on orders above ₹500
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Description ── */}
+        {product.description ? (
+          <SectionCard title="About this Product">
+            <Text style={styles.descText}>{product.description}</Text>
+          </SectionCard>
+        ) : null}
+
+        {/* ── Product Details ── */}
+        <SectionCard title="Product Details">
+          <InfoRow icon="📦" label="Unit" value={product.unit} />
+          <InfoRow icon="🏷️" label="HSN Code" value={product.hsn_or_sac} />
+          <InfoRow icon="⚖️" label="Weight" value={product.weight_with_unit} />
+          <InfoRow
+            icon="📐"
+            label="Dimensions"
+            value={product.dimensions_with_unit}
+          />
+          <InfoRow
+            icon="🔖"
+            label="Product Type"
+            value={
+              product.product_type
+                ? product.product_type.charAt(0).toUpperCase() +
+                  product.product_type.slice(1)
+                : undefined
+            }
+          />
+          {product.track_inventory ? (
+            <InfoRow
+              icon="🗃️"
+              label="Stock"
+              value={`${product.available_stock?.toLocaleString("en-IN")} units`}
+            />
+          ) : null}
+        </SectionCard>
+
+        {/* ── Brand & Manufacturer ── */}
+        {product.brand || product.manufacturer ? (
+          <SectionCard title="Brand & Manufacturer">
+            <InfoRow icon="🌿" label="Brand" value={product.brand} />
+            <InfoRow
+              icon="🏭"
+              label="Manufacturer"
+              value={product.manufacturer}
+            />
+          </SectionCard>
+        ) : null}
+
+        {/* ── Tax Info ── */}
+        {taxPreferences.length > 0 ? (
+          <SectionCard title="Tax Information">
+            {taxPreferences.map((t: TaxPreference, i: number) => (
+              <InfoRow
+                key={i}
+                icon="📋"
+                label={
+                  t.tax_specification === "intra"
+                    ? "GST (Intra-state)"
+                    : "IGST (Inter-state)"
+                }
+                value={`${t.tax_name} — ${t.tax_percentage}%`}
+              />
+            ))}
+          </SectionCard>
+        ) : null}
+
+        {/* ── Return Policy ── */}
+        <View style={styles.returnBanner}>
+          <Text style={styles.returnIcon}>
+            {product.is_returnable ? "↩️" : "⚠️"}
           </Text>
-
-          <View style={s.divider} />
-
-          <Text style={s.sectionTitle}>Storage Instructions</Text>
-          <Text style={s.description}>
-            Store in a cool, dry place. Best consumed within 3-5 days of delivery for optimal freshness.
+          <Text style={styles.returnText}>
+            {product.is_returnable
+              ? "This product is eligible for returns."
+              : "This product is non-returnable once sold."}
           </Text>
         </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Bottom Action Bar */}
-      <View style={s.bottomBar}>
-        <View style={s.priceContainer}>
-          <Text style={s.priceLabel}>Price</Text>
-          <Text style={s.bottomPrice}>₹{product.priceRaw}</Text>
-        </View>
-
-        {qty === 0 ? (
-          <TouchableOpacity
-            style={s.addButton}
-            onPress={() => id && add(id)}
-          >
-            <Text style={s.addButtonText}>Add to Cart</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={s.stepper}>
-            <TouchableOpacity
-              style={s.stepperBtn}
-              onPress={() => id && remove(id)}
-            >
-              <Text style={s.stepperText}>−</Text>
-            </TouchableOpacity>
-            <Text style={s.stepperCount}>{qty}</Text>
-            <TouchableOpacity
-              style={s.stepperBtn}
-              onPress={() => id && add(id)}
-            >
-              <Text style={s.stepperText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {/* ── Bottom CTA ── */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={[styles.cartBtn, !inStock && styles.ctaDisabled]}
+          onPress={inStock ? handleAddToCart : undefined}
+          activeOpacity={inStock ? 0.8 : 1}
+        >
+          <Text style={styles.cartBtnText}>🛒 Add to Cart</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.buyBtn, !inStock && styles.ctaDisabled]}
+          onPress={inStock ? handleBuyNow : undefined}
+          activeOpacity={inStock ? 0.8 : 1}
+        >
+          <Text style={styles.buyBtnText}>
+            {inStock ? "Buy Now" : "Out of Stock"}
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  header: {
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#F5F5F0" },
+
+  // Top Nav
+  topNav: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.green,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EFEFEF",
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backBtnText: {
-    fontSize: 24,
-    color: "#fff",
-  },
-  wishlistBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  navBtn: {
+    width: 38,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 19,
+    backgroundColor: "#F5F5F0",
   },
-  wishlistIcon: {
-    fontSize: 20,
-  },
-  imageContainer: {
-    height: 300,
-    backgroundColor: C.gray1,
-    position: "relative",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  tag: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  tagText: {
-    color: "#fff",
+  navBtnIcon: { fontSize: 18, color: "#333" },
+  wishlistActive: { color: "#E53935" },
+  navTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 16,
     fontWeight: "700",
-    fontSize: 12,
+    color: "#1A1A1A",
+    marginHorizontal: 4,
   },
-  content: {
-    padding: 20,
+  navRight: { flexDirection: "row", gap: 4 },
+
+  // Scroll
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 16 },
+
+  // Image
+  imageSection: {
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    marginBottom: 8,
   },
-  category: {
-    fontSize: 12,
-    color: C.gray4,
-    fontWeight: "600",
-    letterSpacing: 1,
-    marginBottom: 4,
+  imageBox: {
+    width: width - 80,
+    height: width - 80,
+    borderRadius: 20,
+    backgroundColor: "#FFF8E7",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
-  name: {
-    fontSize: 24,
+  productImage: { width: "90%", height: "90%" },
+  imagePlaceholder: { alignItems: "center", justifyContent: "center", gap: 8 },
+  imagePlaceholderText: { fontSize: 56 },
+  imagePlaceholderLabel: { fontSize: 13, color: "#AAA" },
+  categoryPill: {
+    marginTop: 14,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "#C8E6C9",
+  },
+  categoryPillText: { color: "#2E7D32", fontSize: 13, fontWeight: "600" },
+
+  // Product Header
+  productHeader: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 8,
+  },
+  productTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  productName: {
+    flex: 1,
+    fontSize: 20,
     fontWeight: "800",
-    color: C.black,
-    marginBottom: 4,
+    color: "#1A1A1A",
+    lineHeight: 26,
+    letterSpacing: 0.1,
   },
-  unit: {
-    fontSize: 14,
-    color: C.gray5,
-    marginBottom: 12,
-  },
+  brandText: { fontSize: 13, color: "#666", marginTop: 4, fontWeight: "500" },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-  },
-  price: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: C.black,
-  },
-  mrp: {
-    fontSize: 16,
-    color: C.gray4,
-    textDecorationLine: "line-through",
-  },
-  discount: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#DC2626",
-    backgroundColor: "rgba(220,38,38,0.1)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  ratingRow: {
     marginTop: 12,
+    flexWrap: "wrap",
+    gap: 8,
   },
-  rating: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: C.gray3,
-    marginVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: C.black,
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    color: C.gray6,
-    lineHeight: 22,
-  },
-  bottomBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: C.gray3,
-  },
-  priceContainer: {},
-  priceLabel: {
-    fontSize: 12,
-    color: C.gray4,
-  },
-  bottomPrice: {
-    fontSize: 22,
+  priceMain: {
+    fontSize: 26,
     fontWeight: "800",
-    color: C.black,
+    color: "#2E7D32",
+    letterSpacing: -0.5,
   },
-  addButton: {
-    backgroundColor: C.green,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
+  priceMRP: {
+    fontSize: 15,
+    color: "#999",
+    textDecorationLine: "line-through",
+    fontWeight: "500",
   },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
+  taxBadge: {
+    backgroundColor: "#F1F8E9",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#DCEDC8",
   },
-  stepper: {
+  taxBadgeText: { fontSize: 11, color: "#558B2F", fontWeight: "600" },
+  skuText: { fontSize: 12, color: "#AAA", marginTop: 8, fontWeight: "500" },
+
+  // Stock Badge
+  stockBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.green,
-    borderRadius: 12,
-    overflow: "hidden",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 5,
+    marginTop: 2,
   },
-  stepperBtn: {
-    width: 44,
-    height: 44,
+  inStock: { backgroundColor: "#E8F5E9" },
+  outOfStock: { backgroundColor: "#FFEBEE" },
+  stockDot: { width: 7, height: 7, borderRadius: 4 },
+  inStockDot: { backgroundColor: "#2E7D32" },
+  outOfStockDot: { backgroundColor: "#C62828" },
+  stockText: { fontSize: 12, fontWeight: "600" },
+  inStockText: { color: "#2E7D32" },
+  outOfStockText: { color: "#C62828" },
+
+  // Quantity
+  qtyRow: { flexDirection: "row", alignItems: "center", marginTop: 8, gap: 12 },
+  qtyBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#E8F5E9",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#C8E6C9",
   },
-  stepperText: {
-    color: "#fff",
-    fontSize: 24,
+  qtyBtnDisabled: { backgroundColor: "#F5F5F5", borderColor: "#E0E0E0" },
+  qtyBtnText: {
+    fontSize: 20,
+    color: "#2E7D32",
     fontWeight: "700",
+    lineHeight: 24,
   },
-  stepperCount: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    minWidth: 40,
+  qtyValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1A1A1A",
+    minWidth: 28,
     textAlign: "center",
   },
-  errorContainer: {
+  qtyTotal: { marginLeft: "auto", alignItems: "flex-end" },
+  qtyTotalLabel: { fontSize: 11, color: "#888", fontWeight: "500" },
+  qtyTotalValue: { fontSize: 18, color: "#2E7D32", fontWeight: "800" },
+
+  // Section Card
+  sectionCard: {
+    backgroundColor: "#FFFFFF",
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  sectionCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+
+  // Info Row
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F5F5F0",
+  },
+  infoIcon: { fontSize: 15, width: 26 },
+  infoLabel: { flex: 1, fontSize: 13, color: "#666", fontWeight: "500" },
+  infoValue: {
+    fontSize: 13,
+    color: "#1A1A1A",
+    fontWeight: "600",
+    textAlign: "right",
+    maxWidth: "55%",
+  },
+
+  // Delivery Banner
+  deliveryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E3F2FD",
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#1565C0",
+  },
+  deliveryIcon: { fontSize: 22 },
+  deliveryTextBox: { flex: 1 },
+  deliveryTitle: { fontSize: 13, fontWeight: "700", color: "#1565C0" },
+  deliverySubtitle: { fontSize: 12, color: "#1976D2", marginTop: 1 },
+
+  // Description
+  descText: { fontSize: 14, color: "#444", lineHeight: 22 },
+
+  // Return Banner
+  returnBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF8E1",
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#F9A825",
+  },
+  returnIcon: { fontSize: 18 },
+  returnText: { flex: 1, fontSize: 13, color: "#E65100", fontWeight: "500" },
+
+  // Bottom Bar
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 20,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#EFEFEF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  cartBtn: {
     flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#E8F5E9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#2E7D32",
+  },
+  cartBtnText: { fontSize: 14, fontWeight: "700", color: "#2E7D32" },
+  buyBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#2E7D32",
     alignItems: "center",
     justifyContent: "center",
   },
-  errorText: {
-    fontSize: 18,
-    color: C.gray6,
-    marginBottom: 16,
+  buyBtnText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
-  backLink: {
-    color: C.green,
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  ctaDisabled: { opacity: 0.45 },
 });

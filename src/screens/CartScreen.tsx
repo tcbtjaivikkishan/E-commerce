@@ -45,7 +45,14 @@ function EmptyCart() {
           resizeMode="contain"
         />
 
-        <Text style={{ fontSize: 20, fontWeight: "800", color: "#111", marginBottom: 8 }}>
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: "800",
+            color: "#111",
+            marginBottom: 8,
+          }}
+        >
           Empty Cart
         </Text>
 
@@ -86,8 +93,16 @@ function CartItemRow({ item }: { item: { product: any; qty: number } }) {
 
   const pulse = () =>
     Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.96, duration: 60, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.96,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 60,
+        useNativeDriver: true,
+      }),
     ]).start();
 
   return (
@@ -153,7 +168,7 @@ export default function CartScreen() {
   const isEmpty = cartItems.length === 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F5F5F5]">
+    <SafeAreaView className="flex-1 bg-[#fff]">
       <StatusBar barStyle="light-content" backgroundColor="#0F7B3C" />
 
       {/* 🔥 HEADER (ADDED BACK HERE) */}
@@ -165,9 +180,18 @@ export default function CartScreen() {
           paddingBottom: 14,
         }}
       >
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 12,
+          }}
+        >
           <View>
-            <Text style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}>
+            <Text
+              style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}
+            >
               Jaivik Mart
             </Text>
             <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold" }}>
@@ -187,10 +211,9 @@ export default function CartScreen() {
         <View
           style={{
             backgroundColor: "#fff",
-            marginTop: 10,
             borderRadius: 10,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
+            paddingHorizontal: 12,
+            height: 44,
             flexDirection: "row",
             alignItems: "center",
           }}

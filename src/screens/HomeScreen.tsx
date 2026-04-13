@@ -1,15 +1,15 @@
 import { router, usePathname } from "expo-router";
 import { useMemo, useState } from "react";
 import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  StyleSheet,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import BannerCarousel from "../components/ui/BannerCarousel";
@@ -29,10 +29,10 @@ type Product = {
 };
 
 const TABS = [
-  { icon: "🏠", label: "Home",       route: "/home"       },
-  { icon: "🛒", label: "Cart",       route: "/cart"       },
-  { icon: "⊞",  label: "Categories", route: "/categories" },
-  { icon: "📄", label: "Orders",     route: "/orders"     },
+  { icon: "🏠", label: "Home", route: "/home" },
+  { icon: "🛒", label: "Cart", route: "/cart" },
+  { icon: "⊞", label: "Categories", route: "/categories" },
+  { icon: "📄", label: "Orders", route: "/orders" },
 ];
 
 export default function HomeScreen() {
@@ -44,7 +44,7 @@ export default function HomeScreen() {
 
   const bestSellers: Product[] = useMemo(
     () => PRODUCTS.filter((p: Product) => p.isNew),
-    []
+    [],
   );
 
   return (
@@ -129,13 +129,19 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 {/* Active tab gets a green pill behind the icon */}
-                <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-                  <Text style={[styles.tabIcon, active && styles.tabIconActive]}>
+                <View
+                  style={[styles.iconWrap, active && styles.iconWrapActive]}
+                >
+                  <Text
+                    style={[styles.tabIcon, active && styles.tabIconActive]}
+                  >
                     {tab.icon}
                   </Text>
                 </View>
 
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+                <Text
+                  style={[styles.tabLabel, active && styles.tabLabelActive]}
+                >
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -197,6 +203,8 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
   },
 
   brand: {
@@ -223,10 +231,9 @@ const styles = StyleSheet.create({
 
   searchBar: {
     backgroundColor: "#fff",
-    marginTop: 10,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
   },
