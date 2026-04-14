@@ -2,15 +2,18 @@ import { router } from "expo-router";
 import React, { useRef } from "react";
 import {
   Animated,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SvgXml } from "react-native-svg";
+
 import { useAppDispatch, useAppSelector } from "../hooks/redux";
 import {
   addItem,
@@ -23,68 +26,46 @@ import {
   selectTotalItems,
 } from "../store/cartSlice";
 
-/* ─── Empty Cart ─── */
+const { width } = Dimensions.get("window");
+const SCALE = width / 375;
+
+// ── Icon.svg from assets/images — left arrow circle ──────────────────────────
+// Figma: Arrow left-circle, 20×20, border 1.6px #1E1E1E
+const BACK_ICON_SVG = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="10" cy="10" r="9.2" stroke="#1E1E1E" stroke-width="1.6"/>
+  <path d="M11.5 6.5L8 10L11.5 13.5" stroke="#1E1E1E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+// ─── Empty Cart ───────────────────────────────────────────────────────────────
 function EmptyCart() {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 24,
-        marginBottom: 60, // ✅ FIXED (important for visual centering)
-      }}
-    >
+    <View style={styles.emptyContainer}>
+      {/* Cart image: 140×140 from Figma */}
       <Image
-        source={require("@/assets/images/shopping-cart.png")}
-        style={{
-          width: 170,
-          height: 170,
-          marginBottom: 24,
-        }}
+        source={require("../../assets/images/shopping-cart.png")}
+        style={styles.emptyImage}
         resizeMode="contain"
       />
 
-      <Text
-        style={{
-          fontSize: 20,
-          fontWeight: "800",
-          color: "#111",
-          marginBottom: 8,
-        }}
-      >
-        Empty Cart
+      <Text style={styles.emptyTitle}>Empty Cart </Text>
+
+      <Text style={styles.emptySubtitle}>
+        There are no items to show up here,{"\n"}add items to buy.
       </Text>
 
-      <Text
-        style={{
-          fontSize: 13,
-          color: "#777",
-          textAlign: "center",
-          marginBottom: 32,
-        }}
-      >
-        There are no items to show up here{"\n"}add items to buy.
-      </Text>
-
+      {/* Button: 111×44 from Figma */}
       <TouchableOpacity
-        style={{
-          backgroundColor: "#0F7B3C",
-          paddingHorizontal: 28,
-          paddingVertical: 14,
-          borderRadius: 12,
-        }}
-        onPress={() => router.push("/home")}
+        style={styles.shopBtn}
+        onPress={() => router.push("/home" as any)}
+        activeOpacity={0.85}
       >
-        <Text style={{ color: "#fff", fontWeight: "bold" }}>
-          Start Shopping
-        </Text>
+        <Text style={styles.shopBtnText}>Start Shopping</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-/* ─── Cart Item ─── */
+// ─── Cart Item Row ────────────────────────────────────────────────────────────
 function CartItemRow({ item }: { item: { product: any; qty: number } }) {
   const dispatch = useAppDispatch();
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -92,62 +73,31 @@ function CartItemRow({ item }: { item: { product: any; qty: number } }) {
 
   const pulse = () =>
     Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.96,
-        duration: 60,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 60,
-        useNativeDriver: true,
-      }),
+      Animated.timing(scaleAnim, { toValue: 0.96, duration: 60, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1,    duration: 60, useNativeDriver: true }),
     ]).start();
 
   return (
-    <Animated.View
-      className="bg-white rounded-2xl mb-2.5 flex-row overflow-hidden"
-      style={{ transform: [{ scale: scaleAnim }], elevation: 1 }}
-    >
-      <Image source={{ uri: product.image }} className="w-[90px] h-[90px]" />
+    <Animated.View style={[styles.cartRow, { transform: [{ scale: scaleAnim }] }]}>
+      <Image source={{ uri: product.image }} style={styles.cartImage} />
 
-      <View className="flex-1 p-3 justify-between">
-        <View className="flex-row justify-between">
-          <Text className="text-sm font-bold text-[#111]" numberOfLines={2}>
-            {product.name}
-          </Text>
-
+      <View style={styles.cartInfo}>
+        <View style={styles.cartTopRow}>
+          <Text style={styles.cartName} numberOfLines={2}>{product.name}</Text>
           <TouchableOpacity onPress={() => dispatch(clearItem(product.id))}>
-            <Text>✕</Text>
+            <Text style={styles.removeBtn}>✕</Text>
           </TouchableOpacity>
         </View>
 
-        <View className="flex-row justify-between items-center">
-          <Text className="font-bold text-[#111]">
-            ₹{product.priceRaw * qty}
-          </Text>
-
-          <View className="flex-row bg-[#0F7B3C] rounded-xl">
-            <TouchableOpacity
-              className="px-3 py-1"
-              onPress={() => {
-                pulse();
-                dispatch(removeItem(product.id));
-              }}
-            >
-              <Text className="text-white">−</Text>
+        <View style={styles.cartBottomRow}>
+          <Text style={styles.cartPrice}>₹{product.priceRaw * qty}</Text>
+          <View style={styles.stepper}>
+            <TouchableOpacity style={styles.stepBtn} onPress={() => { pulse(); dispatch(removeItem(product.id)); }}>
+              <Text style={styles.stepText}>−</Text>
             </TouchableOpacity>
-
-            <Text className="text-white px-2">{qty}</Text>
-
-            <TouchableOpacity
-              className="px-3 py-1"
-              onPress={() => {
-                pulse();
-                dispatch(addItem(product.id));
-              }}
-            >
-              <Text className="text-white">+</Text>
+            <Text style={styles.stepQty}>{qty}</Text>
+            <TouchableOpacity style={styles.stepBtn} onPress={() => { pulse(); dispatch(addItem(product.id)); }}>
+              <Text style={styles.stepText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -156,113 +106,66 @@ function CartItemRow({ item }: { item: { product: any; qty: number } }) {
   );
 }
 
-/* ─── MAIN SCREEN ─── */
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CartScreen() {
-  const cartItems = useAppSelector(selectCartProducts);
-  const totalItems = useAppSelector(selectTotalItems);
-  const subtotal = useAppSelector(selectSubtotal);
+  const cartItems   = useAppSelector(selectCartProducts);
+  const subtotal    = useAppSelector(selectSubtotal);
   const deliveryFee = useAppSelector(selectDeliveryFee);
-  const total = useAppSelector(selectTotal);
+  const total       = useAppSelector(selectTotal);
+  const totalItems  = useAppSelector(selectTotalItems);
 
   const isEmpty = cartItems.length === 0;
 
   return (
-    // ✅ FIXED: use style instead of className
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F5F5" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F7B3C" />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* HEADER */}
-      <View
-        style={{
-          backgroundColor: "#0F7B3C",
-          paddingHorizontal: 18,
-          paddingTop: 10,
-          paddingBottom: 14,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 12,
-          }}
+      {/* ── Header: white 375×63, Figma drop shadow ── */}
+      <View style={styles.header}>
+
+        {/* Icon.svg — back arrow circle, navigates to home */}
+        <TouchableOpacity
+          onPress={() => router.push("/home" as any)}
+          activeOpacity={0.7}
+          style={styles.backBtn}
         >
-          <View>
-            <Text style={{ color: "#FFD700", fontSize: 12, fontWeight: "bold" }}>
-              Jaivik Mart
-            </Text>
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold" }}>
-              2–3 days
-            </Text>
-            <Text style={{ color: "#fff", fontSize: 12 }}>
-              HOME - Ranjhi, Jabalpur ▼
-            </Text>
-          </View>
+          <SvgXml xml={BACK_ICON_SVG} width={20} height={20} />
+        </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push("/profile")}>
-            <Text style={{ fontSize: 18, color: "#fff" }}>👤</Text>
-          </TouchableOpacity>
-        </View>
+        {/* "Checkout" — Poppins Medium 14px, truly centered */}
+        <Text style={styles.headerTitle}>Checkout</Text>
 
-        {/* Search */}
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            height: 44,
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <Text>🔍</Text>
-          <TextInput
-            placeholder='Search "Aghinotra"'
-            style={{ flex: 1, marginLeft: 8 }}
-          />
-          <Text>🎤</Text>
-        </View>
+        {/* Right spacer = same width as back button for true centering */}
+        <View style={styles.headerSpacer} />
       </View>
 
       {isEmpty ? (
-        <View style={{ flex: 1 }}>
-          <EmptyCart />
-        </View>
+        <EmptyCart />
       ) : (
         <>
-          <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 80 }}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {cartItems.map((item) => (
               <CartItemRow key={item.product.id} item={item} />
             ))}
           </ScrollView>
 
-          {/* Footer */}
-          <View
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: "#fff",
-              flexDirection: "row",
-              justifyContent: "space-between",
-              padding: 16,
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: "800" }}>₹{total}</Text>
-
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#0F7B3C",
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                borderRadius: 12,
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                Checkout →
+          {/* ── Checkout Footer ── */}
+          <View style={styles.checkoutFooter}>
+            <View>
+              <Text style={styles.footerTotal}>₹{total}</Text>
+              <Text style={styles.footerItems}>
+                {totalItems} item{totalItems !== 1 ? "s" : ""}
               </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.checkoutBtn}
+              onPress={() => router.push("/checkout/address" as any)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.checkoutText}>Checkout →</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -270,3 +173,227 @@ export default function CartScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+  },
+
+  // Figma: white header, 375×63, drop shadow Y3 blur12 spread1 25%
+  header: {
+    width: "100%",
+    height: Math.round(63 * SCALE),
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+    zIndex: 10,
+  },
+
+  // Back button touchable area
+  backBtn: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // "Checkout": Poppins Medium 14px, letterSpacing -0.5, centered
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#000000",
+    letterSpacing: -0.5,
+    fontFamily: "Poppins_500Medium",
+  },
+
+  // Spacer matches back button width for true centering
+  headerSpacer: {
+    width: 20,
+  },
+
+  // ── Empty Cart ──
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    backgroundColor: "#fff",
+  },
+
+  // Figma: 140×140
+  emptyImage: {
+    width: 140,
+    height: 140,
+    marginBottom: 20,
+  },
+
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 8,
+    fontFamily: "Poppins_700Bold",
+  },
+
+  // Figma: 172×26
+  emptySubtitle: {
+    fontSize: 13,
+    color: "#777",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 28,
+    fontFamily: "Poppins_400Regular",
+  },
+
+  // Figma: 111×44, padding 10
+  shopBtn: {
+    width: 111,
+    height: 44,
+    backgroundColor: "#196F1B",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  shopBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+    fontFamily: "Poppins_700Bold",
+  },
+
+  // ── Cart items ──
+  scrollContent: {
+    padding: 12,
+    paddingBottom: 90,
+  },
+
+  cartRow: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    marginBottom: 10,
+    flexDirection: "row",
+    overflow: "hidden",
+    elevation: 1,
+  },
+
+  cartImage: {
+    width: 90,
+    height: 90,
+    resizeMode: "contain",
+  },
+
+  cartInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "space-between",
+  },
+
+  cartTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  cartName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111",
+    flex: 1,
+    marginRight: 8,
+  },
+
+  removeBtn: {
+    fontSize: 14,
+    color: "#999",
+  },
+
+  cartBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  cartPrice: {
+    fontWeight: "700",
+    fontSize: 15,
+    color: "#111",
+  },
+
+  stepper: {
+    flexDirection: "row",
+    backgroundColor: "#196F1B",
+    borderRadius: 10,
+    alignItems: "center",
+  },
+
+  stepBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  stepText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  stepQty: {
+    color: "#fff",
+    fontWeight: "700",
+    minWidth: 20,
+    textAlign: "center",
+  },
+
+  // ── Checkout footer ──
+  checkoutFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+  },
+
+  footerTotal: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111",
+  },
+
+  footerItems: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 2,
+  },
+
+  checkoutBtn: {
+    backgroundColor: "#196F1B",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+
+  checkoutText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+});

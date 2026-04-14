@@ -25,21 +25,21 @@ const CARD_GAP = Math.round(8 * SCALE);
 const ITEM_WIDTH = CARD_W + CARD_GAP;
 
 const images = [
-  require("@/assets/image/product1.png"),
-  require("@/assets/image/product2.png"),
-  require("@/assets/image/product3.png"),
-  require("@/assets/image/product4.png"),
-  require("@/assets/image/product5.png"),
-  require("@/assets/image/product6.png"),
-  require("@/assets/image/product7.png"),
-  require("@/assets/image/product8.png"),
-  require("@/assets/image/product9.png"),
-  require("@/assets/image/product10.png"),
-  require("@/assets/image/product11.png"),
-  require("@/assets/image/product13.png"),
-  require("@/assets/image/product14.png"),
-  require("@/assets/image/product15.png"),
-  require("@/assets/image/product16.png"),
+  require("@/assets/images/product1.png"),
+  require("@/assets/images/product2.png"),
+  require("@/assets/images/product3.png"),
+  require("@/assets/images/product4.png"),
+  require("@/assets/images/product5.png"),
+  require("@/assets/images/product6.png"),
+  require("@/assets/images/product7.png"),
+  require("@/assets/images/product8.png"),
+  require("@/assets/images/product9.png"),
+  require("@/assets/images/product10.png"),
+  require("@/assets/images/product11.png"),
+  require("@/assets/images/product13.png"),
+  require("@/assets/images/product14.png"),
+  require("@/assets/images/product15.png"),
+
 ];
 
 // ─── Image Row ────────────────────────────────────────────────────────────────
