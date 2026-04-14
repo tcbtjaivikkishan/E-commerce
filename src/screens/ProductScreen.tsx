@@ -66,7 +66,7 @@ export default function ProductScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 220 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUrl }} style={styles.image} />
         </View>
@@ -81,50 +81,53 @@ export default function ProductScreen() {
         </View>
       </ScrollView>
 
-      {/* ADD TO CART — floats just above the footer pill */}
+      {/* ADD TO CART */}
       <View style={styles.bottomCart}>
         <TouchableOpacity
           style={styles.addToCart}
           onPress={() => add(product.item_id)}
         >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
-            Add to Cart
-          </Text>
+          <Text style={styles.addText}>Add to Cart</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ✅ CUSTOM FOOTER — identical to HomeScreen */}
+      {/* ✅ EXACT SAME TAB BAR AS HOMESCREEN */}
       <View style={styles.footerWrapper}>
-        <View style={styles.footer}>
-          {TABS.map((tab) => {
-            const active = pathname === tab.route;
-            return (
-              <TouchableOpacity
-                key={tab.route}
-                onPress={() => router.push(tab.route)}
-                style={styles.tab}
-                activeOpacity={0.7}
-              >
-                <View style={styles.iconContainer}>
-                  <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-                    <Text style={styles.tabIcon}>{tab.icon}</Text>
-                  </View>
-                  {tab.route === "/cart" && totalItems > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>
-                        {totalItems > 9 ? "9+" : totalItems}
+              <View style={styles.footer}>
+                {TABS.map((tab) => {
+                  const active = pathname === tab.route;
+      
+                  return (
+                    <TouchableOpacity
+                      key={tab.route}
+                      onPress={() => router.push(tab.route)}
+                      style={styles.tab}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.iconContainer}>
+                        <View
+                          style={[styles.iconWrap, active && styles.iconWrapActive]}
+                        >
+                          <Text style={styles.tabIcon}>{tab.icon}</Text>
+                        </View>
+      
+                        {tab.route === "/cart" && totalItems > 0 && (
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                              {totalItems > 9 ? "9+" : totalItems}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+      
+                      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+                        {tab.label}
                       </Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
     </SafeAreaView>
   );
 }
@@ -165,14 +168,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
   },
+
   addToCart: {
     backgroundColor: "#0F7B3C",
     padding: 14,
     borderRadius: 10,
     alignItems: "center",
   },
+  addText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 
-  // ✅ Exact match with HomeScreen footer
   footerWrapper: {
     position: "absolute",
     bottom: 16,
@@ -188,12 +192,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
     elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
   },
-  tab: { alignItems: "center", paddingHorizontal: 20 },
+
+ tab: { alignItems: "center", paddingHorizontal: 20 },
 
   iconContainer: {
     position: "relative",
@@ -209,7 +210,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrapActive: { backgroundColor: "#E8F5E9" },
+
+ iconWrapActive: { backgroundColor: "#E8F5E9" },
   tabIcon: { fontSize: 26 },
 
   tabLabel: { fontSize: 10, color: "#888" },
@@ -229,5 +231,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#fff",
   },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
 });

@@ -196,13 +196,11 @@ export default function TabLayout() {
 
       {/* ✅ ONLY ADDITION — hides native tab bar on product screen */}
       <Tabs.Screen
-        name="product/[id]"
-        options={{
-          tabBarStyle: { display: "none" },
-          tabBarLabel: "",
-          tabBarIcon: () => null,
-        }}
-      />
+  name="product/[id]"
+  options={{
+    tabBarButton: () => null, // 👈 hides it from tab list but keeps tab bar visible
+  }}
+/>
     </Tabs>
   );
 }
