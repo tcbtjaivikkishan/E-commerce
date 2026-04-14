@@ -1,15 +1,19 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useAppSelector } from "../../src/hooks/redux";
+import { selectTotalItems } from "../../src/store/cartSlice";
 
 function TabItem({
   focused,
   icon,
   label,
+  badge,
 }: {
   focused: boolean;
   icon: React.ReactNode;
   label: string;
+  badge?: number;
 }) {
   return (
     <View
@@ -27,10 +31,43 @@ function TabItem({
           paddingHorizontal: 16,
           borderRadius: 25,
           backgroundColor: focused ? "#E8F5E9" : "transparent",
-          minWidth: 70, // 🔥 keeps pill balanced
+          minWidth: 70,
         }}
       >
-        {icon}
+        {/* Icon + Badge wrapper */}
+        <View style={{ position: "relative", marginBottom: 2 }}>
+          {icon}
+
+          {badge != null && badge > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: -6,
+                right: -10,
+                backgroundColor: "#E53935",
+                borderRadius: 10,
+                minWidth: 18,
+                height: 18,
+                justifyContent: "center",
+                alignItems: "center",
+                paddingHorizontal: 4,
+                borderWidth: 1.5,
+                borderColor: "#fff",
+                zIndex: 99,
+              }}
+            >
+              <Text
+                style={{
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: "bold",
+                }}
+              >
+                {badge > 9 ? "9+" : badge}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <Text
           style={{
@@ -49,11 +86,12 @@ function TabItem({
 }
 
 export default function TabLayout() {
+  const totalItems = useAppSelector(selectTotalItems);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-
         tabBarStyle: {
           position: "absolute",
           bottom: 15,
@@ -64,7 +102,6 @@ export default function TabLayout() {
           borderRadius: 40,
           borderTopWidth: 0,
           elevation: 10,
-
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
@@ -101,7 +138,8 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <TabItem
               focused={focused}
-              label="Order Again"
+              label="Cart"
+              badge={totalItems}
               icon={
                 <Ionicons
                   name="cart-outline"
@@ -143,7 +181,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <TabItem
               focused={focused}
-              label="Order"
+              label="Orders"
               icon={
                 <MaterialIcons
                   name="receipt-long"
@@ -153,6 +191,16 @@ export default function TabLayout() {
               }
             />
           ),
+        }}
+      />
+
+      {/* ✅ ONLY ADDITION — hides native tab bar on product screen */}
+      <Tabs.Screen
+        name="product/[id]"
+        options={{
+          tabBarStyle: { display: "none" },
+          tabBarLabel: "",
+          tabBarIcon: () => null,
         }}
       />
     </Tabs>
