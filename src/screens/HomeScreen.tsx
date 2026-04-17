@@ -1,8 +1,8 @@
 import { router } from "expo-router";
 import { useMemo } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
