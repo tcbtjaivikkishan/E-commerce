@@ -1,8 +1,9 @@
 import { router } from "expo-router";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   Animated,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -23,7 +24,6 @@ import {
   selectDeliveryFee,
   selectSubtotal,
   selectTotal,
-  selectTotalItems,
 } from "../store/cartSlice";
 
 // ─── PRODUCTS MAP ─────────────────────────────────────────────────────────────
@@ -64,7 +64,125 @@ const PIN_ICON = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
   <circle cx="7" cy="5" r="1.5" stroke="#555" stroke-width="1.3"/>
 </svg>`;
 
-/// ONLY UI FIXES APPLIED — FUNCTIONALITY UNCHANGED
+const HOME_ICON = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <path d="M2 8L9 2L16 8V16H11V12H7V16H2V8Z" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>`;
+
+// ─── STATIC ADDRESSES (replace with API data when backend is ready) ──────────
+// TODO: Replace this with a backend API call when ready.
+// e.g. fetch('/api/user/addresses').then(r => r.json()).then(setAddresses)
+const STATIC_ADDRESSES = [
+  {
+    id: "1",
+    label: "Home",
+    line1: "Floor 2nd, Behind Lanakant Showroom",
+    line2: "Pal Sawera, Gandhi Vyayam Shala, Jabalpur, M.P.",
+    phone: "8852623751",
+  },
+];
+
+// ─── ADDRESS BOTTOM SHEET ────────────────────────────────────────────────────
+function AddressBottomSheet({
+  visible,
+  selectedId,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  const addresses = STATIC_ADDRESSES;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      {/* Dark backdrop — tap to close */}
+      <TouchableOpacity
+        style={styles.backdrop}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+
+      <View style={styles.sheet}>
+        {/* Drag handle */}
+        <View style={styles.sheetHandle} />
+
+        {/* Header row: title + ✕ close */}
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Select delivery location</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.sheetCloseBtn}
+          >
+            <Text style={styles.sheetCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={{ maxHeight: 300 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {addresses.map((addr) => (
+            <TouchableOpacity
+              key={addr.id}
+              style={[
+                styles.addrCard,
+                selectedId === addr.id && styles.addrCardSelected,
+              ]}
+              onPress={() => onSelect(addr.id)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.addrIconBox}>
+                <SvgXml xml={HOME_ICON} width={18} height={18} />
+              </View>
+
+              <View style={styles.addrTextBlock}>
+                <Text style={styles.addrLabel}>{addr.label}</Text>
+                <Text style={styles.addrLine} numberOfLines={2}>
+                  {addr.line1}, {addr.line2}
+                </Text>
+                <Text style={styles.addrPhone}>Phone number: {addr.phone}</Text>
+              </View>
+
+              <View
+                style={[
+                  styles.radio,
+                  selectedId === addr.id && styles.radioSelected,
+                ]}
+              >
+                {selectedId === addr.id && <View style={styles.radioDot} />}
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          {/* Add new address */}
+          <TouchableOpacity
+            style={styles.addAddrRow}
+            onPress={() => {
+              onClose();
+              // TODO: router.push('/add-address') when that screen exists
+            }}
+          >
+            <Text style={styles.addAddrPlus}>＋</Text>
+            <Text style={styles.addAddrText}>Add new address</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* CTA */}
+        <TouchableOpacity style={styles.sheetCta} onPress={onClose}>
+          <Text style={styles.sheetCtaText}>Select payment option</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+}
 
 // ─── EMPTY CART ───────────────────────────────────────────────
 function EmptyCart() {
@@ -111,8 +229,16 @@ function CartItem({ item }: any) {
 
   const pulse = () =>
     Animated.sequence([
-      Animated.timing(scale, { toValue: 0.97, duration: 60, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(scale, {
+        toValue: 0.97,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 60,
+        useNativeDriver: true,
+      }),
     ]).start();
 
   return (
@@ -131,13 +257,23 @@ function CartItem({ item }: any) {
           <Text style={styles.cartPrice}>₹{price}</Text>
 
           <View style={styles.stepper}>
-            <TouchableOpacity onPress={() => { pulse(); dispatch(removeItem(itemKey)); }}>
+            <TouchableOpacity
+              onPress={() => {
+                pulse();
+                dispatch(removeItem(itemKey));
+              }}
+            >
               <Text style={styles.stepText}>−</Text>
             </TouchableOpacity>
 
             <Text style={styles.stepQty}>{qty}</Text>
 
-            <TouchableOpacity onPress={() => { pulse(); dispatch(addItem(itemKey)); }}>
+            <TouchableOpacity
+              onPress={() => {
+                pulse();
+                dispatch(addItem(itemKey));
+              }}
+            >
               <Text style={styles.stepText}>+</Text>
             </TouchableOpacity>
           </View>
@@ -156,6 +292,15 @@ export default function CartScreen() {
 
   const isEmpty = cartItems.length === 0;
 
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(
+    STATIC_ADDRESSES[0]?.id ?? "1"
+  );
+
+  const selectedAddress =
+    STATIC_ADDRESSES.find((a) => a.id === selectedAddressId) ??
+    STATIC_ADDRESSES[0];
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -172,8 +317,11 @@ export default function CartScreen() {
         <EmptyCart />
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
+          {/* ── Scrollable content (no address card here) ── */}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Deliverables */}
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
@@ -189,7 +337,10 @@ export default function CartScreen() {
               <View style={styles.divider} />
 
               {cartItems.map((item: any) => (
-                <CartItem key={item.product?.id ?? item.product?.item_id} item={item} />
+                <CartItem
+                  key={item.product?.id ?? item.product?.item_id}
+                  item={item}
+                />
               ))}
             </View>
 
@@ -197,7 +348,9 @@ export default function CartScreen() {
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
                 <SvgXml xml={BOX_ICON} width={18} height={18} />
-                <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>Bill Details</Text>
+                <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
+                  Bill Details
+                </Text>
               </View>
 
               <View style={styles.divider} />
@@ -228,34 +381,48 @@ export default function CartScreen() {
                 Once order is placed, any cancellation may result in a fine.
               </Text>
             </View>
+          </ScrollView>
 
-            {/* Address */}
-            <View style={[styles.card, styles.addressCard]}>
+          {/* ── Fixed bottom zone: address card + payment button ── */}
+          <View style={styles.bottomZone}>
+            {/* Address card pinned just above the button */}
+            <View style={styles.addressCard}>
               <View style={styles.addressTopRow}>
                 <View style={styles.addressRow}>
                   <SvgXml xml={PIN_ICON} width={14} height={14} />
-                  <Text style={styles.addressLabel}>Home</Text>
+                  <Text style={styles.addressLabel}>
+                    {selectedAddress?.label ?? "Home"}
+                  </Text>
                 </View>
 
-                <TouchableOpacity style={styles.changeBtn}>
+                <TouchableOpacity
+                  style={styles.changeBtn}
+                  onPress={() => setSheetVisible(true)}
+                >
                   <Text style={styles.changeBtnText}>Change</Text>
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.addressText}>
-                Floor 2nd, Behind Lanakant Showroom, Pal Sawera, Gandhi Vyayam Shala, Jabalpur, M.P.
+                {selectedAddress
+                  ? `${selectedAddress.line1}, ${selectedAddress.line2}`
+                  : "Floor 2nd, Behind Lanakant Showroom, Pal Sawera, Gandhi Vyayam Shala, Jabalpur, M.P."}
               </Text>
             </View>
 
-            <View style={{ height: 140 }} />
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={styles.footer}>
+            {/* Payment button */}
             <TouchableOpacity style={styles.paymentBtn}>
               <Text style={styles.paymentBtnText}>Select payment option</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Address Bottom Sheet */}
+          <AddressBottomSheet
+            visible={sheetVisible}
+            selectedId={selectedAddressId}
+            onSelect={(id) => setSelectedAddressId(id)}
+            onClose={() => setSheetVisible(false)}
+          />
         </>
       )}
     </SafeAreaView>
@@ -276,9 +443,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 16, fontWeight: "700" },
 
+  // ScrollView only holds deliverables / bill / policy — no extra bottom padding needed
   scrollContent: {
     padding: 12,
-    paddingBottom: 160, // ensures no overlap with footer
+    paddingBottom: 16,
   },
 
   card: {
@@ -330,7 +498,33 @@ const styles = StyleSheet.create({
 
   policyText: { fontSize: 12, color: "#666" },
 
-  addressCard: {},
+  // ── Fixed bottom zone (address + button) ──
+  bottomZone: {
+  position: "absolute", // ✅ KEY FIX
+  left: 0,
+  right: 0,
+  bottom: 92,
+  backgroundColor: "#F2F2F2",
+  paddingHorizontal: 12,
+  paddingTop: 8,
+  paddingBottom: 12,
+
+  borderTopWidth: 1,
+  borderTopColor: "#E8E8E8",
+
+  elevation: 8,
+  shadowColor: "#000",
+  shadowOpacity: 0.06,
+  shadowRadius: 5,
+},
+
+  addressCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+
   addressTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -353,65 +547,29 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // 🔥 FIXED FOOTER
- footer: {
-  position: "absolute",
-  bottom: 0, // 👈 anchor to bottom
-  left: 0,
-  right: 0,
+  paymentBtn: {
+    backgroundColor: "#196F1B",
+    height: 50,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  paymentBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
 
-  paddingHorizontal: 16,
-  paddingTop: 8,
-  paddingBottom: 90, // 👈 space for tab bar
-
-  backgroundColor: "#F2F2F2",
-
-  // light shadow
-  shadowColor: "#000",
-  shadowOpacity: 0.06,
-  shadowRadius: 5,
-  elevation: 5,
-},
-
-paymentBtn: {
-  backgroundColor: "#196F1B",
-  height: 50,
-  borderRadius: 12,
-  justifyContent: "center",
-  alignItems: "center",
-},
-
-paymentBtnText: {
-  color: "#fff",
-  fontWeight: "700",
-  fontSize: 15,
-},
-
-  // 🔥 FIXED EMPTY CART
+  // ── Empty Cart ──
   emptyContainer: {
     flex: 1,
     backgroundColor: "#F2F2F2",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  emptyContent: {
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-
-  emptyImage: {
-    width: 150,
-    height: 150,
-    marginBottom: 16,
-  },
-
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-
+  emptyContent: { alignItems: "center", paddingHorizontal: 20 },
+  emptyImage: { width: 150, height: 150, marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontWeight: "700", marginBottom: 6 },
   emptySubtitle: {
     color: "#777",
     textAlign: "center",
@@ -419,16 +577,165 @@ paymentBtnText: {
     lineHeight: 18,
     marginBottom: 20,
   },
-
   shopBtn: {
     backgroundColor: "#196F1B",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
+  shopBtnText: { color: "#fff", fontWeight: "600" },
 
-  shopBtnText: {
-    color: "#fff",
+  // ── Address Bottom Sheet ──
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 36,
+    paddingTop: 12,
+  },
+
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#DDD",
+    alignSelf: "center",
+    marginBottom: 14,
+  },
+
+  // Title row + close button
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+
+  sheetTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  sheetCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F0F0F0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  sheetCloseText: {
+    fontSize: 13,
+    color: "#444",
     fontWeight: "600",
+  },
+
+  addrCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#F9F9F9",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "#F0F0F0",
+  },
+
+  addrCardSelected: {
+    borderColor: "#196F1B",
+    backgroundColor: "#F0FAF0",
+  },
+
+  addrIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#EFEFEF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+
+  addrTextBlock: { flex: 1 },
+
+  addrLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+
+  addrLine: {
+    fontSize: 12,
+    color: "#555",
+    lineHeight: 16,
+  },
+
+  addrPhone: {
+    fontSize: 11,
+    color: "#888",
+    marginTop: 3,
+  },
+
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: "#CCC",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+    marginTop: 2,
+  },
+
+  radioSelected: { borderColor: "#196F1B" },
+
+  radioDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#196F1B",
+  },
+
+  addAddrRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+
+  addAddrPlus: {
+    fontSize: 18,
+    color: "#196F1B",
+    fontWeight: "700",
+    marginRight: 8,
+  },
+
+  addAddrText: {
+    fontSize: 13,
+    color: "#196F1B",
+    fontWeight: "600",
+  },
+
+  sheetCta: {
+    backgroundColor: "#196F1B",
+    height: 50,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+  sheetCtaText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
   },
 });

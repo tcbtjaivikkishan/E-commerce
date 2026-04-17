@@ -303,6 +303,7 @@ const styles = StyleSheet.create({
     color: "#333",
     lineHeight: 13,
     marginBottom: 6,
+    minHeight: 26, // ← FIXED: 2 lines × lineHeight 13 = consistent ADD button position
   },
 
   bottomArea: {
