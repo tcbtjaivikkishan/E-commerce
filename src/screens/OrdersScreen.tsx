@@ -1,5 +1,5 @@
 import { View, Text } from "react-native";
-import Footer from "../components/ui/Footer"; // ✅ IMPORT FOOTER
+
 
 export default function OrdersScreen() {
   return (
@@ -33,8 +33,7 @@ export default function OrdersScreen() {
         </Text>
       </View>
 
-      {/* ✅ GLOBAL FOOTER */}
-      <Footer />
+   
 
     </View>
   );

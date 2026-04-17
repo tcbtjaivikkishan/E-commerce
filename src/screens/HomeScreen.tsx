@@ -14,7 +14,6 @@ import {
 
 import BannerCarousel from "../components/ui/BannerCarousel";
 import Header from "../components/ui/Header";
-import Footer from "../components/ui/Footer"; // ✅ ADDED
 import PRODUCTS_JSON from "../data/products.json";
 import { useCart } from "../hooks/useCart";
 import { useWishlist } from "../hooks/useWishlist";
@@ -28,8 +27,9 @@ export default function HomeScreen() {
 
   const bestSellers = useMemo(() => PRODUCTS.slice(0, 10), []);
 
-  const CARD_WIDTH = (width - 16 * 2 - 12 * 2) / 3;
-  const CARD_HEIGHT = CARD_WIDTH * 1.35; // ✅ slightly reduced for better fit
+  // Show exactly 3 cards + a peek of the 4th
+  // Formula: (screenWidth - leftPadding - gaps between 3 cards) / 3.2
+  const CARD_WIDTH = (width - 16 - 10 * 3) / 3.15;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -42,13 +42,13 @@ export default function HomeScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent} // ✅ FIXED
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <BannerCarousel />
 
         {/* Recently Searched */}
-        <Text style={styles.section}>Recently Searched</Text>
+        <Text style={styles.sectionTitle}>Recently Searched</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -64,13 +64,12 @@ export default function HomeScreen() {
               toggle={toggle}
               isWishlisted={isWishlisted}
               cardWidth={CARD_WIDTH}
-              cardHeight={CARD_HEIGHT}
             />
           ))}
         </ScrollView>
 
         {/* Best Sellers */}
-        <Text style={styles.section}>Our Bestsellers</Text>
+        <Text style={styles.sectionTitle}>Our Bestsellers</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -86,14 +85,10 @@ export default function HomeScreen() {
               toggle={toggle}
               isWishlisted={isWishlisted}
               cardWidth={CARD_WIDTH}
-              cardHeight={CARD_HEIGHT}
             />
           ))}
         </ScrollView>
       </ScrollView>
-
-      {/* ✅ GLOBAL FOOTER */}
-      <Footer />
     </SafeAreaView>
   );
 }
@@ -107,7 +102,6 @@ function ProductCard({
   toggle,
   isWishlisted,
   cardWidth,
-  cardHeight,
 }: any) {
   const image =
     p.image ||
@@ -115,39 +109,63 @@ function ProductCard({
       ? `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`
       : null);
 
+  const qty = getQty(p.item_id);
+  const imgSize = cardWidth - 16; // 8px padding on each side
+
   return (
     <TouchableOpacity
-      style={[styles.card, { width: cardWidth, height: cardHeight }]}
+      style={[styles.card, { width: cardWidth }]}
       activeOpacity={0.85}
       onPress={() => router.push(`/product/${p.item_id}` as any)}
     >
+      {/* Wishlist icon */}
       <TouchableOpacity
         style={styles.wishlist}
         onPress={(e) => {
           e.stopPropagation();
           toggle(p.item_id);
         }}
+        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
       >
-        <Text>{isWishlisted(p.item_id) ? "❤️" : "🤍"}</Text>
+        <Text style={styles.wishlistIcon}>
+          {isWishlisted(p.item_id) ? "❤️" : "🤍"}
+        </Text>
       </TouchableOpacity>
 
-      {image && <Image source={{ uri: image }} style={styles.img} />}
+      {/* Product Image */}
+      {image ? (
+        <Image
+          source={{ uri: image }}
+          style={[styles.img, { width: imgSize, height: imgSize * 0.9 }]}
+        />
+      ) : (
+        <View
+          style={[
+            styles.imgPlaceholder,
+            { width: imgSize, height: imgSize * 0.9 },
+          ]}
+        />
+      )}
 
-      <View style={styles.cardContent}>
-        <Text style={styles.weight}>{p.unit}</Text>
+      {/* Unit / weight */}
+      <Text style={styles.unit}>{p.unit}</Text>
 
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>₹{p.rate}</Text>
-          {p.label_rate && <Text style={styles.mrp}>₹{p.label_rate}</Text>}
-        </View>
-
-        <Text numberOfLines={2} style={styles.name}>
-          {p.name}
-        </Text>
+      {/* Price row */}
+      <View style={styles.priceRow}>
+        <Text style={styles.price}>₹{p.rate}</Text>
+        {p.label_rate && (
+          <Text style={styles.mrp}>₹{p.label_rate}</Text>
+        )}
       </View>
 
+      {/* Product name */}
+      <Text numberOfLines={2} style={styles.name}>
+        {p.name}
+      </Text>
+
+      {/* ADD / Stepper */}
       <View style={styles.bottomArea}>
-        {getQty(p.item_id) === 0 ? (
+        {qty === 0 ? (
           <TouchableOpacity
             style={styles.addBtn}
             onPress={(e) => {
@@ -160,7 +178,7 @@ function ProductCard({
         ) : (
           <View style={styles.stepper}>
             <TouchableOpacity
-              style={styles.stepTouchable}
+              style={styles.stepTouch}
               onPress={(e) => {
                 e.stopPropagation();
                 remove(p.item_id);
@@ -169,10 +187,10 @@ function ProductCard({
               <Text style={styles.stepText}>−</Text>
             </TouchableOpacity>
 
-            <Text style={styles.qty}>{getQty(p.item_id)}</Text>
+            <Text style={styles.qty}>{qty}</Text>
 
             <TouchableOpacity
-              style={styles.stepTouchable}
+              style={styles.stepTouch}
               onPress={(e) => {
                 e.stopPropagation();
                 add(p.item_id);
@@ -199,78 +217,92 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
   },
 
-  // ✅ IMPORTANT FIX FOR FOOTER SPACE
   scrollContent: {
     paddingBottom: 130,
   },
 
-  section: {
+  sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
+    color: "#111",
     marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 6,
+    marginTop: 16,
+    marginBottom: 8,
   },
 
   horizontalList: {
     paddingLeft: 16,
     paddingRight: 8,
+    paddingBottom: 4,
   },
 
+  // ── Card ──
   card: {
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 8,
-    marginRight: 12,
+    marginRight: 10,
     elevation: 2,
-    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
 
   wishlist: {
     position: "absolute",
     top: 6,
     right: 6,
-    zIndex: 1,
+    zIndex: 2,
+  },
+
+  wishlistIcon: {
+    fontSize: 12,
   },
 
   img: {
-    width: "100%",
-    height: "40%",
     resizeMode: "contain",
+    alignSelf: "center",
+    marginBottom: 6,
   },
 
-  cardContent: {
-    flex: 1,
-    marginTop: 4,
+  imgPlaceholder: {
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    alignSelf: "center",
+    marginBottom: 6,
   },
 
-  weight: {
-    fontSize: 11,
-    color: "#777",
+  unit: {
+    fontSize: 10,
+    color: "#888",
+    marginBottom: 1,
   },
 
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 2,
   },
 
   price: {
+    fontSize: 12,
     fontWeight: "700",
-    fontSize: 13,
+    color: "#111",
   },
 
   mrp: {
+    fontSize: 10,
+    color: "#999",
     textDecorationLine: "line-through",
     marginLeft: 4,
-    fontSize: 10,
-    color: "#777",
   },
 
   name: {
-    fontSize: 12,
-    lineHeight: 14,
-    marginTop: 2,
-    color: "#222",
+    fontSize: 10,
+    color: "#333",
+    lineHeight: 13,
+    marginBottom: 6,
   },
 
   bottomArea: {
@@ -278,17 +310,18 @@ const styles = StyleSheet.create({
   },
 
   addBtn: {
-    borderWidth: 1.2,
+    borderWidth: 1.5,
     borderColor: "#196F1B",
     borderRadius: 6,
-    paddingVertical: 5,
+    paddingVertical: 4,
     alignItems: "center",
+    backgroundColor: "#fff",
   },
 
   addText: {
     color: "#196F1B",
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 11,
   },
 
   stepper: {
@@ -297,23 +330,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#196F1B",
     borderRadius: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
 
-  stepTouchable: {
+  stepTouch: {
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
 
   stepText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
 
   qty: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 12,
+    fontWeight: "700",
+    fontSize: 11,
+    minWidth: 16,
+    textAlign: "center",
   },
 });
