@@ -43,7 +43,7 @@ export default function Header({
     if (user?.isLoggedIn) {
       router.push("/product/profile");
     } else {
-      router.push("/auth/login");
+      router.push("/profile");
     }
   };
 
