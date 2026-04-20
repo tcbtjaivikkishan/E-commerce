@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 
+
 export default function OrdersScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#F5F5F5" }}>
@@ -24,12 +25,16 @@ export default function OrdersScreen() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
+          paddingBottom: 120, // ✅ IMPORTANT (space for footer)
         }}
       >
         <Text style={{ fontSize: 16, color: "#777" }}>
           No orders yet
         </Text>
       </View>
+
+   
+
     </View>
   );
 }
