@@ -1,4 +1,4 @@
-import CategoriesScreen from "@/src/screens/CategoriesScreen";
+import CategoriesScreen from "@/src/features/catalog/screens/CategoriesScreen";
 
 export default function Categories() {
   return <CategoriesScreen />;

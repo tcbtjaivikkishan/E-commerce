@@ -1,5 +1,4 @@
-
-import HomeScreen from "../../src/screens/HomeScreen";
+import HomeScreen from "../../src/features/catalog/screens/HomeScreen";
 
 export default function Home() {
   return <HomeScreen />;

@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import CartScreen from "@/src/screens/CartScreen";
+import CartScreen from "@/src/features/cart/screens/CartScreen";
 
 export default function Cart() {
   return (

@@ -1,2 +1,2 @@
-import AddressScreen from '../../src/screens/checkout/AddressScreen';
+import AddressScreen from '../../src/features/checkout/screens/AddressScreen';
 export default AddressScreen;

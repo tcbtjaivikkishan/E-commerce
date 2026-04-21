@@ -1,8 +1,8 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useAppSelector } from "../../src/hooks/redux";
-import { selectTotalItems } from "../../src/store/cartSlice";
+import { useAppSelector } from "../../src/shared/hooks/useRedux";
+import { selectTotalItems } from "../../src/features/cart/store/cartSlice";
 
 function TabItem({
   focused,

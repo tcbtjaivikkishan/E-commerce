@@ -1,4 +1,4 @@
-import OrdersScreen from "@/src/screens/OrdersScreen";
+import OrdersScreen from "@/src/features/orders/screens/OrdersScreen";
 
 export default function Orders() {
   return <OrdersScreen />;
