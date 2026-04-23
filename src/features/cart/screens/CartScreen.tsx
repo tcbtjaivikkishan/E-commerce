@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   // ScrollView only holds deliverables / bill / policy — no extra bottom padding needed
   scrollContent: {
     padding: 12,
-    paddingBottom: 16,
+    paddingBottom: 190,
   },
 
   card: {
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     position: "absolute", // ✅ KEY FIX
     left: 0,
     right: 0,
-    bottom: 92,
+    bottom: 0,
     backgroundColor: "#F2F2F2",
     paddingHorizontal: 12,
     paddingTop: 8,
