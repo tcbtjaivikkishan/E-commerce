@@ -50,9 +50,25 @@ const userSlice = createSlice({
     addAddress(state, action: PayloadAction<UserAddress>) {
       state.addresses.push(action.payload);
     },
+    removeAddress(state, action: PayloadAction<number>) {
+      state.addresses.splice(action.payload, 1);
+    },
+    updateAddress(
+      state,
+      action: PayloadAction<{ index: number; address: UserAddress }>
+    ) {
+      state.addresses[action.payload.index] = action.payload.address;
+    },
   },
 });
 
-export const { loginSuccess, logout, updateProfile, setAddresses, addAddress } =
-  userSlice.actions;
+export const {
+  loginSuccess,
+  logout,
+  updateProfile,
+  setAddresses,
+  addAddress,
+  removeAddress,
+  updateAddress,
+} = userSlice.actions;
 export default userSlice.reducer;

@@ -12,16 +12,17 @@ import {
   View,
 } from "react-native";
 import { SvgXml } from "react-native-svg";
-import type { UserAddress } from "../../auth/types/auth.types";
 
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
 import {
   addItem,
   removeItem,
+  selectCartItems,
   selectCartProducts,
   selectDeliveryFee,
   selectSubtotal,
   selectTotal,
+  updateItemAsync,
 } from "../store/cartSlice";
 
 // ─── IMAGE HELPER ─────────────────────────────────────────────────────────────
@@ -58,16 +59,7 @@ const HOME_ICON = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
   <path d="M2 8L9 2L16 8V16H11V12H7V16H2V8Z" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>
 </svg>`;
 
-// Fallback if no addresses loaded
-const FALLBACK_ADDRESS = {
-  label: "Home",
-  line1: "Floor 2nd, Behind Lenskart Showroom",
-  line2: "Pal Sweets, Gandhi Vyayam Shala",
-  city: "Jabalpur",
-  state: "M.P.",
-  pincode: "482001",
-  receiver_phone: "8602623751",
-};
+
 
 // ─── ADDRESS BOTTOM SHEET ────────────────────────────────────────────────────
 function AddressBottomSheet({
@@ -201,6 +193,8 @@ function EmptyCart() {
 // ─── CART ITEM ────────────────────────────────────────────────────────────────
 function CartItem({ item }: any) {
   const dispatch = useAppDispatch();
+  // Read live cart quantities so we always compute the correct next qty
+  const cartItems = useAppSelector(selectCartItems);
   const scale = useRef(new Animated.Value(1)).current;
 
   const product = item.product;
@@ -226,6 +220,26 @@ function CartItem({ item }: any) {
       }),
     ]).start();
 
+  const handleAdd = () => {
+    pulse();
+    const currentQty = cartItems[itemKey] ?? 0;
+    const newQty = currentQty + 1;
+    // Optimistic UI update
+    dispatch(addItem(itemKey));
+    // Sync to PATCH /cart/items
+    dispatch(updateItemAsync({ productId: itemKey, quantity: newQty }));
+  };
+
+  const handleRemove = () => {
+    pulse();
+    const currentQty = cartItems[itemKey] ?? 0;
+    const newQty = Math.max(0, currentQty - 1);
+    // Optimistic UI update
+    dispatch(removeItem(itemKey));
+    // Sync to PATCH /cart/items (quantity: 0 removes the item server-side)
+    dispatch(updateItemAsync({ productId: itemKey, quantity: newQty }));
+  };
+
   return (
     <Animated.View style={[styles.cartRow, { transform: [{ scale }] }]}>
       <Image source={{ uri: getImage(product) }} style={styles.cartImage} />
@@ -242,23 +256,13 @@ function CartItem({ item }: any) {
           <Text style={styles.cartPrice}>₹{price}</Text>
 
           <View style={styles.stepper}>
-            <TouchableOpacity
-              onPress={() => {
-                pulse();
-                dispatch(removeItem(itemKey));
-              }}
-            >
+            <TouchableOpacity onPress={handleRemove}>
               <Text style={styles.stepText}>−</Text>
             </TouchableOpacity>
 
             <Text style={styles.stepQty}>{qty}</Text>
 
-            <TouchableOpacity
-              onPress={() => {
-                pulse();
-                dispatch(addItem(itemKey));
-              }}
-            >
+            <TouchableOpacity onPress={handleAdd}>
               <Text style={styles.stepText}>+</Text>
             </TouchableOpacity>
           </View>
@@ -281,9 +285,9 @@ export default function CartScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [selectedAddressIdx, setSelectedAddressIdx] = useState(0);
 
-  const addresses = userAddresses.length > 0 ? userAddresses : [FALLBACK_ADDRESS];
-  const selectedAddress = addresses[selectedAddressIdx] || addresses[0];
-
+  const addresses = userAddresses;
+  const selectedAddress = addresses[selectedAddressIdx] ?? addresses[0] ?? null;
+  
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -368,34 +372,58 @@ export default function CartScreen() {
 
           {/* ── Fixed bottom zone: address card + payment button ── */}
           <View style={styles.bottomZone}>
-            {/* Address card pinned just above the button */}
-            <View style={styles.addressCard}>
-              <View style={styles.addressTopRow}>
-                <View style={styles.addressRow}>
-                  <SvgXml xml={PIN_ICON} width={14} height={14} />
-                  <Text style={styles.addressLabel}>
-                    {selectedAddress?.label ?? "Home"}
-                  </Text>
+            {addresses.length === 0 ? (
+              /* ── No address: Blinkit-style Add Address prompt ── */
+              <TouchableOpacity
+                style={styles.addAddrPrompt}
+                activeOpacity={0.85}
+                onPress={() => router.push("/add-address" as any)}
+              >
+                <View style={styles.addAddrPromptLeft}>
+                  <View style={styles.addAddrIconCircle}>
+                    <SvgXml xml={PIN_ICON} width={16} height={16} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.addAddrPromptTitle}>Add delivery address</Text>
+                    <Text style={styles.addAddrPromptSub}>Select a location to see product availability</Text>
+                  </View>
+                </View>
+                <Text style={styles.addAddrPromptArrow}>›</Text>
+              </TouchableOpacity>
+            ) : (
+              /* ── Has address: normal address card ── */
+              <View style={styles.addressCard}>
+                <View style={styles.addressTopRow}>
+                  <View style={styles.addressRow}>
+                    <SvgXml xml={PIN_ICON} width={14} height={14} />
+                    <Text style={styles.addressLabel}>
+                      {selectedAddress?.label ?? "Home"}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.changeBtn}
+                    onPress={() => setSheetVisible(true)}
+                  >
+                    <Text style={styles.changeBtnText}>Change</Text>
+                  </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.changeBtn}
-                  onPress={() => setSheetVisible(true)}
-                >
-                  <Text style={styles.changeBtnText}>Change</Text>
-                </TouchableOpacity>
+                <Text style={styles.addressText}>
+                  {[selectedAddress?.line1, selectedAddress?.line2, selectedAddress?.city, selectedAddress?.state]
+                    .filter(Boolean)
+                    .join(", ")}
+                </Text>
               </View>
-
-              <Text style={styles.addressText}>
-                {selectedAddress
-                  ? [selectedAddress.line1, selectedAddress.line2, selectedAddress.city, selectedAddress.state].filter(Boolean).join(", ")
-                  : "No address selected"}
-              </Text>
-            </View>
+            )}
 
             {/* Payment button */}
             <TouchableOpacity
-              style={styles.paymentBtn}
+              style={[
+                styles.paymentBtn,
+                addresses.length === 0 && styles.paymentBtnDisabled,
+              ]}
+              disabled={addresses.length === 0}
             >
               <Text style={styles.paymentBtnText}>Select payment option</Text>
             </TouchableOpacity>
@@ -486,23 +514,23 @@ const styles = StyleSheet.create({
 
   // ── Fixed bottom zone (address + button) ──
   bottomZone: {
-  position: "absolute", // ✅ KEY FIX
-  left: 0,
-  right: 0,
-  bottom: 92,
-  backgroundColor: "#F2F2F2",
-  paddingHorizontal: 12,
-  paddingTop: 8,
-  paddingBottom: 12,
+    position: "absolute", // ✅ KEY FIX
+    left: 0,
+    right: 0,
+    bottom: 92,
+    backgroundColor: "#F2F2F2",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
 
-  borderTopWidth: 1,
-  borderTopColor: "#E8E8E8",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E8E8",
 
-  elevation: 8,
-  shadowColor: "#000",
-  shadowOpacity: 0.06,
-  shadowRadius: 5,
-},
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+  },
 
   addressCard: {
     backgroundColor: "#fff",
@@ -540,10 +568,56 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  paymentBtnDisabled: {
+    backgroundColor: "#A5C8A6",
+  },
   paymentBtnText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,
+  },
+
+  // ── Add-address prompt (Blinkit style) ──
+  addAddrPrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "#196F1B",
+  },
+  addAddrPromptLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  addAddrIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EAF5EA",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  addAddrPromptTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E1E1E",
+  },
+  addAddrPromptSub: {
+    fontSize: 11,
+    color: "#888",
+    marginTop: 2,
+  },
+  addAddrPromptArrow: {
+    fontSize: 22,
+    color: "#196F1B",
+    fontWeight: "300",
+    marginLeft: 8,
   },
 
   // ── Empty Cart ──

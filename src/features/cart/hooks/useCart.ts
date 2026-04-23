@@ -35,10 +35,10 @@ export function useCart() {
 
   const add = useCallback(
     (id: string) => {
-      // Optimistic update
+      // Read current qty BEFORE dispatching the optimistic update
+      const currentQty = cart[id] ?? 0;
+      const newQty = currentQty + 1;
       dispatch(addItem(id));
-      // Then sync with server
-      const newQty = (cart[id] ?? 0) + 1;
       dispatch(updateItemAsync({ productId: id, quantity: newQty }));
     },
     [dispatch, cart]
@@ -46,8 +46,9 @@ export function useCart() {
 
   const remove = useCallback(
     (id: string) => {
+      const currentQty = cart[id] ?? 0;
+      const newQty = Math.max(0, currentQty - 1);
       dispatch(removeItem(id));
-      const newQty = Math.max(0, (cart[id] ?? 0) - 1);
       dispatch(updateItemAsync({ productId: id, quantity: newQty }));
     },
     [dispatch, cart]
@@ -87,14 +88,16 @@ export function useProductQty(productId: string) {
   const qty  = cart[productId] ?? 0;
 
   const add = useCallback(() => {
+    const currentQty = cart[productId] ?? 0;
     dispatch(addItem(productId));
-    dispatch(updateItemAsync({ productId, quantity: qty + 1 }));
-  }, [dispatch, productId, qty]);
+    dispatch(updateItemAsync({ productId, quantity: currentQty + 1 }));
+  }, [dispatch, productId, cart]);
 
   const remove = useCallback(() => {
+    const currentQty = cart[productId] ?? 0;
     dispatch(removeItem(productId));
-    dispatch(updateItemAsync({ productId, quantity: Math.max(0, qty - 1) }));
-  }, [dispatch, productId, qty]);
+    dispatch(updateItemAsync({ productId, quantity: Math.max(0, currentQty - 1) }));
+  }, [dispatch, productId, cart]);
 
   return { qty, add, remove };
 }

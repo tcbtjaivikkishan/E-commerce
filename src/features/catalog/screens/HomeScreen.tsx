@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
 
   cardWrapper: {
     flex: 1,
-    margin: 6,
+    margin: 4,
     maxWidth: "32%",
   },
 });

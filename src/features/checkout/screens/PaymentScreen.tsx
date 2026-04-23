@@ -1,5 +1,8 @@
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -10,7 +13,12 @@ import {
 } from 'react-native';
 import { useAppSelector } from '../../../shared/hooks/useRedux';
 import { useOrder } from '../hooks/useOrder';
-import { clearCart, selectSubtotal, selectTotalItems } from '../../cart/store/cartSlice';
+import {
+  selectSubtotal,
+  selectTotalItems,
+  selectTotalWeightGrams,
+} from '../../cart/store/cartSlice';
+import { calculateShippingRate, type ShippingRateResponse } from '../services/shipping.api';
 
 const GREEN = '#0C8A45';
 const BORDER = '#EBEBEB';
@@ -26,18 +34,63 @@ const PAYMENT_OPTIONS = [
 
 type PaymentMethod = typeof PAYMENT_OPTIONS[number]['id'];
 
-export default function PaymentScreen() {
-  const { tempPayment, updatePayment, submitOrderAsync, isReadyToPlace, status } = useOrder();
-  const subtotal   = useAppSelector(selectSubtotal);
-  const totalItems = useAppSelector(selectTotalItems);
+// ─── Shipping state shape ─────────────────────────────────────────────────────
+type ShippingState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: ShippingRateResponse }
+  | { status: 'error'; message: string };
 
+export default function PaymentScreen() {
+  const { tempAddress, tempPayment, updatePayment, submitOrderAsync, isReadyToPlace, status } = useOrder();
+  const subtotal       = useAppSelector(selectSubtotal);
+  const totalItems     = useAppSelector(selectTotalItems);
+  const totalWeightG   = useAppSelector(selectTotalWeightGrams);
+
+  const [shipping, setShipping] = useState<ShippingState>({ status: 'idle' });
+
+  // ── Fetch live shipping rate whenever address pincode or weight changes ──────
+  useEffect(() => {
+    const pincode = Number(tempAddress?.pincode);
+    if (!pincode || totalWeightG <= 0) {
+      setShipping({ status: 'idle' });
+      return;
+    }
+
+    let cancelled = false;
+    setShipping({ status: 'loading' });
+
+    calculateShippingRate(totalWeightG, pincode)
+      .then((res) => {
+        if (!cancelled) setShipping({ status: 'success', data: res });
+      })
+      .catch((err: any) => {
+        if (!cancelled)
+          setShipping({
+            status: 'error',
+            message: err?.message ?? 'Could not fetch shipping rate',
+          });
+      });
+
+    return () => { cancelled = true; };
+  }, [totalWeightG, tempAddress?.pincode]);
+
+  // ── Derived shipping values ──────────────────────────────────────────────────
+  const shippingCharge =
+    shipping.status === 'success' ? shipping.data.shippingCharge : 0;
+  const courierLabel =
+    shipping.status === 'success'
+      ? `${shipping.data.courier} · ${shipping.data.estimatedDelivery}`
+      : null;
+  const grandTotal = subtotal + shippingCharge;
+
+  // ── Place order ──────────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (isReadyToPlace && subtotal > 0 && totalItems > 0) {
       try {
         await submitOrderAsync();
         router.push('/checkout/success');
       } catch (err: any) {
-        const { Alert } = require('react-native');
         Alert.alert('Order Failed', err?.message || 'Could not place order. Please try again.');
       }
     }
@@ -98,29 +151,63 @@ export default function PaymentScreen() {
         </View>
 
         <View style={s.billCard}>
+          {/* Item total */}
           <View style={s.billRow}>
             <Text style={s.billLabel}>Item Total</Text>
             <Text style={s.billValue}>₹{subtotal.toLocaleString()}</Text>
           </View>
           <View style={s.divider} />
+
+          {/* Delivery Fee — live */}
           <View style={s.billRow}>
-            <Text style={s.billLabel}>Delivery Fee</Text>
-            <Text style={[s.billValue, s.greenText]}>FREE</Text>
+            <View style={s.deliveryLabelCol}>
+              <Text style={s.billLabel}>Delivery Fee</Text>
+              {courierLabel && (
+                <Text style={s.courierTag}>{courierLabel}</Text>
+              )}
+            </View>
+            <View style={s.deliveryValueCol}>
+              {shipping.status === 'loading' ? (
+                <ActivityIndicator size="small" color={GREEN} />
+              ) : shipping.status === 'success' ? (
+                <Text style={[s.billValue, shippingCharge === 0 && s.greenText]}>
+                  {shippingCharge === 0 ? 'FREE' : `₹${shippingCharge}`}
+                </Text>
+              ) : shipping.status === 'error' ? (
+                <Text style={s.errorText}>–</Text>
+              ) : (
+                <Text style={[s.billValue, s.greenText]}>–</Text>
+              )}
+            </View>
           </View>
           <View style={s.divider} />
+
+          {/* Grand total */}
           <View style={s.billRow}>
             <Text style={s.billTotalLabel}>To Pay</Text>
-            <Text style={s.billTotalValue}>₹{subtotal.toLocaleString()}</Text>
+            <Text style={s.billTotalValue}>₹{grandTotal.toLocaleString()}</Text>
           </View>
         </View>
+
+        {/* Shipping error banner */}
+        {shipping.status === 'error' && (
+          <View style={s.shippingErrorBanner}>
+            <Text style={s.shippingErrorText}>
+              ⚠️ {shipping.message}. Shipping cost may vary.
+            </Text>
+          </View>
+        )}
 
       </ScrollView>
 
       {/* Place order footer */}
       <View style={s.footer}>
         <View style={s.footerInfo}>
-          <Text style={s.footerTotal}>₹{subtotal.toLocaleString()}</Text>
-          <Text style={s.footerSub}>{totalItems} item{totalItems > 1 ? 's' : ''} · Free delivery</Text>
+          <Text style={s.footerTotal}>₹{grandTotal.toLocaleString()}</Text>
+          <Text style={s.footerSub}>
+            {totalItems} item{totalItems > 1 ? 's' : ''}
+            {shippingCharge > 0 ? ` · ₹${shippingCharge} delivery` : ' · Free delivery'}
+          </Text>
         </View>
         <TouchableOpacity
           style={[s.placeBtn, !isReadyToPlace && s.placeBtnDisabled]}
@@ -217,8 +304,33 @@ const s = StyleSheet.create({
   billLabel: { fontSize: 13, color: TEXT_SECONDARY },
   billValue: { fontSize: 13, fontWeight: '600', color: TEXT_PRIMARY },
   greenText: { color: GREEN },
+  errorText: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
   billTotalLabel: { fontSize: 14, fontWeight: '700', color: TEXT_PRIMARY },
   billTotalValue: { fontSize: 15, fontWeight: '700', color: TEXT_PRIMARY },
+
+  // Delivery fee row with courier sub-label
+  deliveryLabelCol: { flex: 1 },
+  deliveryValueCol: { minWidth: 60, alignItems: 'flex-end' },
+  courierTag: {
+    fontSize: 11,
+    color: GREEN,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
+  // Shipping error banner
+  shippingErrorBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  shippingErrorText: {
+    fontSize: 12,
+    color: '#92400E',
+  },
 
   // Footer — same pattern as CartScreen checkout bar
   footer: {

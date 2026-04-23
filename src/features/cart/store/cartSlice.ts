@@ -9,8 +9,7 @@ import type { RootState } from "../../../store/store";
 import {
   fetchCart,
   updateCartItem,
-  type CartItemResponse,
-  type CartResponse,
+  type CartResponse
 } from "../services/cart.api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -230,3 +229,49 @@ export const selectCartLoading = (state: RootState) => state.cart.loading;
 
 /** Cart error */
 export const selectCartError = (state: RootState) => state.cart.error;
+
+// ─── Weight helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Parse a product unit string into grams.
+ *
+ * Handles patterns like: "500g", "1kg", "1.5kg", "250ml", "200gm", "1 kg"
+ * Falls back to 0 if no recognisable unit is found.
+ */
+function parseUnitToGrams(unit: string): number {
+  if (!unit) return 0;
+  const str = unit.toLowerCase().replace(/\s+/g, '');
+
+  // Match a number followed by a unit keyword
+  const match = str.match(/^([\d.]+)(kg|g|gm|ml|l)$/);
+  if (!match) return 0;
+
+  const value = parseFloat(match[1]);
+  const suffix = match[2];
+
+  switch (suffix) {
+    case 'kg':
+    case 'l':
+      return value * 1000; // kg → g,  litre → ml (treat as grams for weight)
+    case 'g':
+    case 'gm':
+    case 'ml':
+      return value;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Total weight of all items in the cart, in **grams**.
+ * Used to determine the shipping package type (SPS vs B2B).
+ */
+export const selectTotalWeightGrams = createSelector(
+  [selectCartProducts],
+  (cartItems) =>
+    cartItems.reduce(
+      (total, { product, qty }) =>
+        total + parseUnitToGrams(product.unit) * qty,
+      0
+    )
+);

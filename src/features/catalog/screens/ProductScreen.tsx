@@ -216,7 +216,6 @@ export default function ProductScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 140 }}

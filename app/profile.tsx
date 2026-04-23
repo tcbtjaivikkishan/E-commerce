@@ -77,7 +77,7 @@ export default function ProfileScreen() {
 
           <MenuItem
             title="Address book"
-            onPress={() => router.push("/add-address" as any)}
+            onPress={() => router.push("/address-book" as any)}
           />
           <MenuItem
             title="Your wishlist"

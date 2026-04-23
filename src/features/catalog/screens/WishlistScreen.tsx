@@ -1,5 +1,6 @@
 // src/features/catalog/screens/WishlistScreen.tsx
 // ─── Matches Figma screen_10: 3-col grid, checkbox, heart, ADD, weight, price ──
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -14,9 +15,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useCart } from "../../cart/hooks/useCart";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
+import { useCart } from "../../cart/hooks/useCart";
 import {
   loadWishlist,
   removeWishlistItem,
@@ -88,169 +88,169 @@ export default function WishlistScreen() {
 
       <View style={styles.container}>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.push("/home" as any);
-          }}
-          style={styles.backBtn}
-        >
-          <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Wishlist</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      {/* States */}
-      {!isLoggedIn ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔒</Text>
-          <Text style={styles.emptyTitle}>Login to see your wishlist</Text>
-          <Text style={styles.emptySubtitle}>
-            Sign in to save and view your favourite products
-          </Text>
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={styles.browseBtn}
-            onPress={() => router.push("/auth/login" as any)}
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.push("/home" as any);
+            }}
+            style={styles.backBtn}
           >
-            <Text style={styles.browseBtnText}>Login</Text>
+            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Wishlist</Text>
+          <View style={{ width: 36 }} />
         </View>
-      ) : wishlistLoading && products.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={GREEN} />
-          <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>
-            Loading wishlist...
-          </Text>
-        </View>
-      ) : products.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>💚</Text>
-          <Text style={styles.emptyTitle}>Your wishlist is empty</Text>
-          <Text style={styles.emptySubtitle}>
-            Tap the heart icon on products to add them here
-          </Text>
-          <TouchableOpacity
-            style={styles.browseBtn}
-            onPress={() => router.push("/home" as any)}
-          >
-            <Text style={styles.browseBtnText}>Browse Products</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.grid}
-          showsVerticalScrollIndicator={false}
-        >
-          {products.map((p) => {
-            const id = p.id;
-            const qty = getQty(id);
-            const isSelected = selected.has(id);
 
-            return (
-              <TouchableOpacity
-                key={id}
-                style={styles.card}
-                activeOpacity={0.9}
-                onPress={() => router.push(`/product/${id}` as any)}
-              >
-                {/* Checkbox (top-left) */}
+        {/* States */}
+        {!isLoggedIn ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>🔒</Text>
+            <Text style={styles.emptyTitle}>Login to see your wishlist</Text>
+            <Text style={styles.emptySubtitle}>
+              Sign in to save and view your favourite products
+            </Text>
+            <TouchableOpacity
+              style={styles.browseBtn}
+              onPress={() => router.push("/auth/login" as any)}
+            >
+              <Text style={styles.browseBtnText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        ) : wishlistLoading && products.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={GREEN} />
+            <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>
+              Loading wishlist...
+            </Text>
+          </View>
+        ) : products.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>💚</Text>
+            <Text style={styles.emptyTitle}>Your wishlist is empty</Text>
+            <Text style={styles.emptySubtitle}>
+              Tap the heart icon on products to add them here
+            </Text>
+            <TouchableOpacity
+              style={styles.browseBtn}
+              onPress={() => router.push("/home" as any)}
+            >
+              <Text style={styles.browseBtnText}>Browse Products</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.grid}
+            showsVerticalScrollIndicator={false}
+          >
+            {products.map((p) => {
+              const id = p.id;
+              const qty = getQty(id);
+              const isSelected = selected.has(id);
+
+              return (
                 <TouchableOpacity
-                  style={styles.checkbox}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    toggleSelect(id);
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  key={id}
+                  style={styles.card}
+                  activeOpacity={0.9}
+                  onPress={() => router.push(`/product/${id}` as any)}
                 >
-                  <View
-                    style={[
-                      styles.checkboxBox,
-                      isSelected && styles.checkboxBoxChecked,
-                    ]}
+                  {/* Checkbox (top-left) */}
+                  <TouchableOpacity
+                    style={styles.checkbox}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(id);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    {isSelected && (
-                      <Ionicons name="checkmark" size={12} color="#fff" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                {/* Heart (top-right) */}
-                <TouchableOpacity
-                  style={styles.heartBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleRemove(id);
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="heart-outline" size={16} color="#999" />
-                </TouchableOpacity>
-
-                {/* Product Image */}
-                <Image
-                  source={{ uri: getImage(p) }}
-                  style={styles.productImg}
-                  resizeMode="contain"
-                />
-
-                {/* Weight + ADD row */}
-                <View style={styles.weightAddRow}>
-                  <Text style={styles.weight}>{p.weight}</Text>
-                  {qty === 0 ? (
-                    <TouchableOpacity
-                      style={styles.addBtn}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        add(id);
-                      }}
+                    <View
+                      style={[
+                        styles.checkboxBox,
+                        isSelected && styles.checkboxBoxChecked,
+                      ]}
                     >
-                      <Text style={styles.addBtnText}>ADD</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.stepper}>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={12} color="#fff" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Heart (top-right) */}
+                  <TouchableOpacity
+                    style={styles.heartBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleRemove(id);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="heart-outline" size={16} color="#999" />
+                  </TouchableOpacity>
+
+                  {/* Product Image */}
+                  <Image
+                    source={{ uri: getImage(p) }}
+                    style={styles.productImg}
+                    resizeMode="contain"
+                  />
+
+                  {/* Weight + ADD row */}
+                  <View style={styles.weightAddRow}>
+                    <Text style={styles.weight}>{p.weight}</Text>
+                    {qty === 0 ? (
                       <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          remove(id);
-                        }}
-                        style={styles.stepBtn}
-                      >
-                        <Text style={styles.stepText}>−</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.stepQty}>{qty}</Text>
-                      <TouchableOpacity
+                        style={styles.addBtn}
                         onPress={(e) => {
                           e.stopPropagation();
                           add(id);
                         }}
-                        style={styles.stepBtn}
                       >
-                        <Text style={styles.stepText}>+</Text>
+                        <Text style={styles.addBtnText}>ADD</Text>
                       </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
+                    ) : (
+                      <View style={styles.stepper}>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            remove(id);
+                          }}
+                          style={styles.stepBtn}
+                        >
+                          <Text style={styles.stepText}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.stepQty}>{qty}</Text>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            add(id);
+                          }}
+                          style={styles.stepBtn}
+                        >
+                          <Text style={styles.stepText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
 
-                {/* Price row */}
-                <View style={styles.priceRow}>
-                  <Text style={styles.price}>₹{p.price || 0}</Text>
-                  {p.mrp && p.mrp > (p.price || 0) && (
-                    <Text style={styles.mrp}>₹{p.mrp}</Text>
-                  )}
-                </View>
+                  {/* Price row */}
+                  <View style={styles.priceRow}>
+                    <Text style={styles.price}>₹{p.price || 0}</Text>
+                    {p.mrp && p.mrp > (p.price || 0) && (
+                      <Text style={styles.mrp}>₹{p.mrp}</Text>
+                    )}
+                  </View>
 
-                {/* Product name */}
-                <Text numberOfLines={2} style={styles.name}>
-                  {p.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
+                  {/* Product name */}
+                  <Text numberOfLines={2} style={styles.name}>
+                    {p.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );

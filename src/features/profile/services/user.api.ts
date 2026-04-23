@@ -36,3 +36,32 @@ export async function addUserAddress(
     body: address,
   });
 }
+
+/**
+ * PATCH /users/:id/address — remove an address by index [JWT]
+ * Backend only accepts PATCH; we send { action: "remove", index }
+ */
+export async function deleteUserAddress(
+  userId: string,
+  index: number
+): Promise<BackendUser> {
+  return apiRequest<BackendUser>(`/users/${userId}/address`, {
+    method: "PATCH",
+    body: { action: "remove", index },
+  });
+}
+
+/**
+ * PATCH /users/:id/address — update an address by index [JWT]
+ * Backend only accepts PATCH; we send { action: "update", index, ...address }
+ */
+export async function updateUserAddress(
+  userId: string,
+  index: number,
+  address: Partial<UserAddress>
+): Promise<BackendUser> {
+  return apiRequest<BackendUser>(`/users/${userId}/address`, {
+    method: "PATCH",
+    body: { action: "update", index, ...address },
+  });
+}

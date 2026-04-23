@@ -1,12 +1,12 @@
 // src/features/checkout/services/shipping.api.ts
 // ─── Real API calls for shipping rate calculation ────────────────────────────
 
-import { apiRequest } from "../../../shared/services/api.client";
+import { apiRequest } from '../../../shared/services/api.client';
 
 export interface ShippingRateRequest {
-  weight: number;
-  deliveryPincode: number;
-  type_of_package?: string;
+  weight: number;             // grams
+  deliveryPincode: number;    // numeric
+  type_of_package: 'SPS' | 'B2B';
 }
 
 export interface ShippingRateResponse {
@@ -14,21 +14,31 @@ export interface ShippingRateResponse {
   shippingCharge: number;
   courier: string;
   estimatedDelivery: string;
-  fullResponse?: any;
+  fullResponse?: Record<string, unknown>;
 }
 
 /**
- * POST /shipping/rate — get shipping cost and courier estimate
+ * POST /shipping/rate — get live shipping cost and courier estimate.
+ *
+ * @param weightGrams      Total order weight in grams
+ * @param deliveryPincode  Delivery pin code as a number
+ *
+ * Business rule:
+ *   weight > 20,000 g  (i.e. > 20 kg)  → type_of_package = 'B2B'
+ *   otherwise                           → type_of_package = 'SPS'
  */
 export async function calculateShippingRate(
-  params: ShippingRateRequest
+  weightGrams: number,
+  deliveryPincode: number
 ): Promise<ShippingRateResponse> {
-  return apiRequest<ShippingRateResponse>("/shipping/rate", {
-    method: "POST",
+  const type_of_package: 'SPS' | 'B2B' = weightGrams > 20_000 ? 'B2B' : 'SPS';
+
+  return apiRequest<ShippingRateResponse>('/shipping/rate', {
+    method: 'POST',
     body: {
-      weight: params.weight,
-      deliveryPincode: params.deliveryPincode,
-      type_of_package: params.type_of_package || "SPS",
-    },
+      weight: weightGrams,
+      deliveryPincode,
+      type_of_package,
+    } as ShippingRateRequest,
   });
 }
