@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -87,12 +86,9 @@ export default function Header({
           <SvgXml xml={SEARCH_SVG} width={16} height={16} />
 
           {/* Search placeholder text */}
-          <TextInput
-            placeholder={searchPlaceholder}
-            placeholderTextColor="#aaa"
-            style={styles.searchInput}
-            editable={false}
-          />
+          <Text style={styles.searchInput} numberOfLines={1}>
+            {searchPlaceholder}
+          </Text>
 
           {/* Vertical divider line — "Line 2" from Figma */}
           <View style={styles.divider} />
@@ -201,8 +197,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: "#333",
-    height: "100%",
+    color: "#aaa",
   },
 
   // Figma: Line 2 — vertical divider between search text and mic icon

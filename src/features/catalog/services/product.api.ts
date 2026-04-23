@@ -38,6 +38,12 @@ export interface CategoryResponse {
   is_active?: boolean;
 }
 
+let productsCache: ApiProductResponse[] | null = null;
+
+export function getCachedProducts(): ApiProductResponse[] {
+  return productsCache ?? [];
+}
+
 // ─── Products ────────────────────────────────────────────────────────────────
 
 /**
@@ -45,12 +51,26 @@ export interface CategoryResponse {
  * The API may return a plain array or an object like { data: [...] } or { items: [...] }
  */
 export async function fetchAllProducts(): Promise<ApiProductResponse[]> {
+  if (productsCache) return productsCache;
+
   const raw = await apiRequest<any>("/products", { skipAuth: true });
   // Normalize: could be array directly, or { data: [] }, { items: [] }, { products: [] }
-  if (Array.isArray(raw)) return raw;
-  if (raw?.data && Array.isArray(raw.data)) return raw.data;
-  if (raw?.items && Array.isArray(raw.items)) return raw.items;
-  if (raw?.products && Array.isArray(raw.products)) return raw.products;
+  if (Array.isArray(raw)) {
+    productsCache = raw;
+    return productsCache;
+  }
+  if (raw?.data && Array.isArray(raw.data)) {
+    productsCache = raw.data;
+    return raw.data;
+  }
+  if (raw?.items && Array.isArray(raw.items)) {
+    productsCache = raw.items;
+    return raw.items;
+  }
+  if (raw?.products && Array.isArray(raw.products)) {
+    productsCache = raw.products;
+    return raw.products;
+  }
   console.warn("[fetchAllProducts] Unexpected response shape:", typeof raw, Object.keys(raw || {}));
   return [];
 }
