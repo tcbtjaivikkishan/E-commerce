@@ -242,7 +242,11 @@ function CartItem({ item }: any) {
 
   return (
     <Animated.View style={[styles.cartRow, { transform: [{ scale }] }]}>
-      <Image source={{ uri: getImage(product) }} style={styles.cartImage} />
+      <Image
+        source={{ uri: getImage(product) }}
+        style={styles.cartImage}
+        resizeMode="contain"
+      />
 
       <View style={styles.cartInfo}>
         <View style={styles.cartTopRow}>
@@ -316,7 +320,7 @@ export default function CartScreen() {
                 <View style={{ marginLeft: 8 }}>
                   <Text style={styles.sectionTitle}>Deliverables</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Shipped in {cartItems.length} package(s)
+                    Shipped in package(s)
                   </Text>
                 </View>
               </View>
@@ -477,7 +481,12 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "#eee", marginVertical: 8 },
 
   cartRow: { flexDirection: "row", marginBottom: 10 },
-  cartImage: { width: 70, height: 70, borderRadius: 8 },
+  cartImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    backgroundColor: "#F7F7F7",
+  },
   cartInfo: { flex: 1, marginLeft: 10 },
 
   cartTopRow: { flexDirection: "row", justifyContent: "space-between" },
