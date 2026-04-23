@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  Keyboard,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 import { sendOtp, verifyOtp } from "../services/auth.service";
 
@@ -123,6 +125,48 @@ export default function LoginScreen() {
 
   const ROW_H = CARD_H + CARD_GAP;
 
+  // ── Blinkit-style keyboard animation ─────────────────────────────────────
+  const sheetTranslateY = useRef(new Animated.Value(0)).current;
+  const imageRowsOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const onShow = Keyboard.addListener("keyboardDidShow", (e) => {
+      const kbHeight = e.endCoordinates.height;
+      Animated.parallel([
+        Animated.timing(sheetTranslateY, {
+          toValue: -kbHeight,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(imageRowsOpacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+
+    const onHide = Keyboard.addListener("keyboardDidHide", () => {
+      Animated.parallel([
+        Animated.timing(sheetTranslateY, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(imageRowsOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
   const handleSendOtp = async () => {
     if (phone.length < 10) {
       Alert.alert("Error", "Enter a valid 10-digit phone number");
@@ -183,16 +227,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* 4 scrolling rows */}
-      <View>
+      {/* 3 scrolling rows — fades out smoothly when keyboard opens */}
+      <Animated.View style={{ opacity: imageRowsOpacity }}>
         <ImageRow rowImages={images.slice(0, 5)} reverse={false} rowOpacity={1} />
         <ImageRow rowImages={images.slice(5, 10)} reverse={true} rowOpacity={1} />
         <ImageRow rowImages={images.slice(10, 15)} reverse={false} rowOpacity={1} />
-        <ImageRow rowImages={images.slice(0, 5)} reverse={true} rowOpacity={0.75} />
-      </View>
+      </Animated.View>
 
       {/* Fade gradient */}
       <LinearGradient
@@ -208,10 +251,19 @@ export default function LoginScreen() {
         pointerEvents="none"
       />
 
-      {/* Bottom sheet */}
-      <View style={styles.sheet}>
+      {/* Bottom sheet — slides up exactly by keyboard height */}
+      <Animated.View
+        style={[
+          styles.sheet,
+          { transform: [{ translateY: sheetTranslateY }] },
+        ]}
+      >
         <View style={styles.logoWrapper}>
-          <View style={styles.logo} />
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <Text style={styles.title}>India's Leading Organic Brand</Text>
@@ -244,6 +296,13 @@ export default function LoginScreen() {
                 {loading ? "Sending..." : "Login"}
               </Text>
             </TouchableOpacity>
+
+            <Text style={styles.termsText}>
+              By continuing you agree to our{" "}
+              <Text style={styles.termsLink}>Terms of Service</Text>
+              {" "}and{" "}
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </Text>
           </>
         ) : (
           <>
@@ -276,8 +335,8 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </>
         )}
-      </View>
-    </View>
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 
@@ -289,27 +348,24 @@ const styles = StyleSheet.create({
   logoWrapper: {
     alignItems: "center",
     marginBottom: 14,
-    marginTop: -26,
   },
   logo: {
-    width: 50,
-    height: 50,
-    backgroundColor: "#196F1B",
-    borderRadius: 5,
+    width: 90,
+    height: 90,
   },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: 28,
+    paddingTop: 40,
     paddingBottom: 32,
     flex: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
   },
   title: {
     fontSize: 20,
@@ -399,5 +455,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#196F1B",
     marginTop: 14,
+  },
+  termsText: {
+    textAlign: "center",
+    fontSize: 11,
+    color: "#999",
+    marginTop: 12,
+    lineHeight: 16,
+    paddingHorizontal: 8,
+  },
+  termsLink: {
+    color: "#196F1B",
+    fontWeight: "600",
   },
 });

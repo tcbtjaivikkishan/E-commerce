@@ -4,7 +4,6 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -85,7 +84,7 @@ export default function OrdersScreen() {
 
   if (!isLoggedIn) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Orders</Text>
         </View>
@@ -102,7 +101,7 @@ export default function OrdersScreen() {
             <Text style={styles.loginBtnText}>Login</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -183,8 +182,8 @@ export default function OrdersScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={GREEN} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Orders</Text>
@@ -229,7 +228,7 @@ export default function OrdersScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -237,7 +236,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F5F5" },
 
   header: {
-    backgroundColor: GREEN,
+    backgroundColor: "white",
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 14,
@@ -245,7 +244,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "bold" },
+  headerTitle: { color: "black", fontSize: 20, fontWeight: "bold" },
   headerCount: { color: "rgba(255,255,255,0.8)", fontSize: 13 },
 
   listContent: { padding: 12, paddingBottom: 120 },

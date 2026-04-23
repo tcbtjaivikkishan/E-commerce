@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../cart/hooks/useCart";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
@@ -83,8 +83,10 @@ export default function WishlistScreen() {
   }));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      <View style={styles.container}>
 
       {/* Header */}
       <View style={styles.header}>
@@ -249,11 +251,13 @@ export default function WishlistScreen() {
           })}
         </ScrollView>
       )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, backgroundColor: "#F8F8F8" },
 
   /* Header */

@@ -4,7 +4,6 @@ import {
   Animated,
   Image,
   Modal,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -286,7 +285,7 @@ export default function CartScreen() {
   const selectedAddress = addresses[selectedAddressIdx] || addresses[0];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.header}>
@@ -412,7 +411,7 @@ export default function CartScreen() {
           />
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

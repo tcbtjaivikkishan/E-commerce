@@ -74,8 +74,8 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#196F1B" />
+    <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <Header
           searchPlaceholder='Search "Agnihotra"'
           onSearchPress={() => router.push("/search" as any)}
@@ -84,14 +84,14 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color="#196F1B" />
           <Text style={styles.loadingText}>Loading products...</Text>
         </View>
-      </SafeAreaView>
+    </View>
     );
   }
 
   if (error && products.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#196F1B" />
+    <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <Header
           searchPlaceholder='Search "Agnihotra"'
           onSearchPress={() => router.push("/search" as any)}
@@ -111,13 +111,13 @@ export default function HomeScreen() {
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+    </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#196F1B" />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <Header
         searchPlaceholder='Search "Agnihotra"'
@@ -207,7 +207,7 @@ export default function HomeScreen() {
           )}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

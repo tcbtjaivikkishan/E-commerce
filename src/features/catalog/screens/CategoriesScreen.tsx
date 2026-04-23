@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import {
   Dimensions,
   Image,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -200,8 +199,8 @@ export default function CategoryScreen(): React.JSX.Element {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#196F1B" />
+    <View style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* ── Shared Header — replaces old inline header ── */}
       <Header
@@ -224,7 +223,7 @@ export default function CategoryScreen(): React.JSX.Element {
         ))}
         <View style={{ height: 32 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

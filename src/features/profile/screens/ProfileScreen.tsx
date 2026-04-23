@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { C } from "../../../core/theme";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
-import { logout, updateProfile } from "../../auth/store/userSlice";
 import { logoutUser } from "../../auth/services/auth.service";
+import { logout, updateProfile } from "../../auth/store/userSlice";
 import { updateUserProfile } from "../services/user.api";
 
 const MENU_SECTIONS = [
