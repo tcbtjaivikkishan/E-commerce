@@ -123,6 +123,27 @@ export default function ProductScreen() {
     return () => { mounted = false; };
   }, [id]);
 
+  // ⚠️ ALL hooks must be called before any early return!
+  const handleWishlist = useCallback(() => {
+    setWishlisted((prev) => !prev);
+    Alert.alert(
+      wishlisted ? "Removed from Wishlist" : "Added to Wishlist",
+      wishlisted
+        ? `${product?.name} removed from your wishlist.`
+        : `${product?.name} saved to your wishlist!`
+    );
+  }, [wishlisted, product?.name]);
+
+  const handleShare = useCallback(async () => {
+    try {
+      await Share.share({
+        title: product?.name,
+        message: `Check out ${product?.name} on Jaivik Mart!\n\nPrice: ₹${product?.price || 0}\n\nShop fresh & organic products at Jaivik Mart.`,
+        url: getImageUrl(product),
+      });
+    } catch (e) {}
+  }, [product]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -139,26 +160,6 @@ export default function ProductScreen() {
   const imageUrl = getImageUrl(product);
   const qty = getQty(productId);
   const price = getProductPrice(product);
-
-  const handleWishlist = useCallback(() => {
-    setWishlisted((prev) => !prev);
-    Alert.alert(
-      wishlisted ? "Removed from Wishlist" : "Added to Wishlist",
-      wishlisted
-        ? `${product.name} removed from your wishlist.`
-        : `${product.name} saved to your wishlist!`
-    );
-  }, [wishlisted, product.name]);
-
-  const handleShare = useCallback(async () => {
-    try {
-      await Share.share({
-        title: product.name,
-        message: `Check out ${product.name} on Jaivik Mart!\n\nPrice: ₹${price}\n\nShop fresh & organic products at Jaivik Mart.`,
-        url: imageUrl,
-      });
-    } catch (e) {}
-  }, [product.name, price, imageUrl]);
 
   const displayPrice =
     selectedVariant === "500g" ? price : Math.round(price * 1.9);
