@@ -92,9 +92,9 @@ export async function fetchPaginatedProducts(
  * GET /products/:id — by Mongo _id or zoho_item_id
  */
 export async function fetchProductById(
-  id: string
+  id: string  
 ): Promise<ApiProductResponse> {
-  return apiRequest<ApiProductResponse>(`/products/${id}`, { skipAuth: true });
+  return apiRequest<ApiProductResponse>(`/products/id/${id}`, { skipAuth: true });
 }
 
 /**
