@@ -94,7 +94,7 @@ export async function fetchPaginatedProducts(
 export async function fetchProductById(
   id: string
 ): Promise<ApiProductResponse> {
-  return apiRequest<ApiProductResponse>(`/products/${id}`, { skipAuth: true });
+  return apiRequest<ApiProductResponse>(`/products/id/${id}`, { skipAuth: true });
 }
 
 /**

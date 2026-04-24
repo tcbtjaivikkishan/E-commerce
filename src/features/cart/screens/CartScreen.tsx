@@ -1,6 +1,7 @@
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Image,
   Modal,
@@ -15,13 +16,17 @@ import { SvgXml } from "react-native-svg";
 
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
 import {
+  calculateShippingRate,
+  type ShippingRateResponse,
+} from "../../checkout/services/shipping.api";
+import { setTempAddress } from "../../checkout/store/orderSlice";
+import {
   addItem,
   removeItem,
   selectCartItems,
   selectCartProducts,
-  selectDeliveryFee,
   selectSubtotal,
-  selectTotal,
+  selectTotalWeightGrams,
   updateItemAsync,
 } from "../store/cartSlice";
 
@@ -276,12 +281,19 @@ function CartItem({ item }: any) {
   );
 }
 
+// ─── Shipping state shape (mirrors PaymentScreen) ────────────────────────────
+type ShippingState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: ShippingRateResponse }
+  | { status: 'error'; message: string };
+
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export default function CartScreen() {
+  const dispatch = useAppDispatch();
   const cartItems = useAppSelector(selectCartProducts);
   const subtotal = useAppSelector(selectSubtotal);
-  const deliveryFee = useAppSelector(selectDeliveryFee);
-  const total = useAppSelector(selectTotal);
+  const totalWeightG = useAppSelector(selectTotalWeightGrams);
   const userAddresses = useAppSelector((state) => state.user.addresses) || [];
 
   const isEmpty = cartItems.length === 0;
@@ -291,7 +303,59 @@ export default function CartScreen() {
 
   const addresses = userAddresses;
   const selectedAddress = addresses[selectedAddressIdx] ?? addresses[0] ?? null;
-  
+
+  // ── Live shipping rate ────────────────────────────────────────────────────
+  const [shipping, setShipping] = useState<ShippingState>({ status: 'idle' });
+
+  useEffect(() => {
+    console.log('[SHIPPING DEBUG] selectedAddress:', JSON.stringify(selectedAddress));
+    console.log('[SHIPPING DEBUG] cartItems.length:', cartItems.length);
+    const pincode = Number(selectedAddress?.pincode);
+    console.log('[SHIPPING DEBUG] parsed pincode:', pincode, 'raw:', selectedAddress?.pincode);
+    if (!pincode || cartItems.length === 0) {
+      console.log('[SHIPPING DEBUG] GUARD BLOCKED → idle. pincode:', pincode, 'items:', cartItems.length);
+      setShipping({ status: 'idle' });
+      return;
+    }
+    console.log('[SHIPPING DEBUG] FETCHING shipping rate... weight:', totalWeightG, 'pincode:', pincode);
+    let cancelled = false;
+    setShipping({ status: 'loading' });
+    calculateShippingRate(totalWeightG, pincode)
+      .then((res) => {
+        console.log('[SHIPPING DEBUG] API RESPONSE:', JSON.stringify(res), 'cancelled:', cancelled);
+        if (!cancelled) setShipping({ status: 'success', data: res });
+      })
+      .catch((err: any) => {
+        console.log('[SHIPPING DEBUG] API ERROR:', err?.message, 'cancelled:', cancelled);
+        if (!cancelled)
+          setShipping({ status: 'error', message: err?.message ?? 'Could not fetch rate' });
+      });
+    return () => {
+      console.log('[SHIPPING DEBUG] CLEANUP → cancelled = true');
+      cancelled = true;
+    };
+    // Use a stable string key (not the object ref) to avoid infinite re-runs
+  }, [cartItems.length, selectedAddress?.pincode, selectedAddress?._id]);
+
+  const shippingCharge =
+    shipping.status === 'success' ? shipping.data.shippingCharge : 0;
+  const grandTotal = subtotal + shippingCharge;
+
+  // ── Sync selected address into orderSlice whenever it changes ──────────────
+  useEffect(() => {
+    if (!selectedAddress) return;
+    dispatch(
+      setTempAddress({
+        name: selectedAddress.receiver_name || selectedAddress.label || "Customer",
+        phone: selectedAddress.receiver_phone || selectedAddress.phone || "",
+        street: selectedAddress.line1 || "",
+        city: selectedAddress.city || "",
+        state: selectedAddress.state || "",
+        pincode: selectedAddress.pincode || "",
+      })
+    );
+  }, [selectedAddress, dispatch]);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -352,15 +416,36 @@ export default function CartScreen() {
               </View>
 
               <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Delivery charge</Text>
-                <Text style={styles.billValue}>₹{deliveryFee}</Text>
+                <View>
+                  <Text style={styles.billLabel}>Delivery charge</Text>
+                  {shipping.status === 'success' && shipping.data.courier ? (
+                    <Text style={styles.courierTag}>
+                      {shipping.data.courier} · {shipping.data.estimatedDelivery}
+                    </Text>
+                  ) : null}
+                </View>
+                {shipping.status === 'loading' ? (
+                  <ActivityIndicator size="small" color="#196F1B" />
+                ) : shipping.status === 'success' ? (
+                  <Text style={[styles.billValue, shippingCharge === 0 && styles.billValueFree]}>
+                    {shippingCharge === 0 ? 'FREE' : `₹${shippingCharge}`}
+                  </Text>
+                ) : shipping.status === 'error' ? (
+                  <Text style={styles.billValueError}>–</Text>
+                ) : (
+                  <Text style={styles.billValue}>–</Text>
+                )}
               </View>
+
+              {shipping.status === 'error' && (
+                <Text style={styles.shippingErrorText}>⚠️ {shipping.message}</Text>
+              )}
 
               <View style={styles.divider} />
 
               <View style={styles.billRow}>
                 <Text style={styles.billLabelBold}>Grand Total</Text>
-                <Text style={styles.billValueBold}>₹{total}</Text>
+                <Text style={styles.billValueBold}>₹{grandTotal}</Text>
               </View>
             </View>
 
@@ -428,6 +513,7 @@ export default function CartScreen() {
                 addresses.length === 0 && styles.paymentBtnDisabled,
               ]}
               disabled={addresses.length === 0}
+              onPress={() => router.push("/checkout/payment" as any)}
             >
               <Text style={styles.paymentBtnText}>Select payment option</Text>
             </TouchableOpacity>
@@ -516,6 +602,10 @@ const styles = StyleSheet.create({
   },
   billLabel: { color: "#444" },
   billValue: { color: "#444" },
+  billValueFree: { color: "#196F1B", fontWeight: "600" },
+  billValueError: { color: "#EF4444", fontWeight: "600" },
+  courierTag: { fontSize: 11, color: "#196F1B", marginTop: 2, fontWeight: "500" },
+  shippingErrorText: { fontSize: 11, color: "#92400E", marginBottom: 4 },
   billLabelBold: { fontWeight: "700" },
   billValueBold: { fontWeight: "700" },
 

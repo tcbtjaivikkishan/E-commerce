@@ -80,15 +80,15 @@ function parseCartResponse(cart: CartResponse) {
   for (const item of cart.items || []) {
     const id = item.product_id;
     items[id] = item.quantity;
-    if (item.name) {
-      productData[id] = {
-        id,
-        name: item.name || "Unknown",
-        priceRaw: item.price || 0,
-        unit: "",
-        image: item.image_url || "https://via.placeholder.com/150",
-      };
-    }
+    // Always upsert productData — even if name is missing — so UI never
+    // shows a "Loading..." placeholder for a known cart item.
+    productData[id] = {
+      id,
+      name: item.name || "Unknown Product",
+      priceRaw: item.price || 0,
+      unit: "",
+      image: item.image_url || "https://via.placeholder.com/150",
+    };
   }
 
   return { items, productData, serverTotal: cart.total_amount || 0 };
@@ -182,23 +182,8 @@ export const selectCartProducts = createSelector(
   (items, productData) =>
     Object.entries(items)
       .filter(([, qty]) => qty > 0)
-      .map(([id, qty]) => {
-        const product = productData[id];
-        if (!product) {
-          // Fallback: we know the ID and qty but not product data yet
-          return {
-            product: {
-              id,
-              name: "Loading...",
-              priceRaw: 0,
-              unit: "",
-              image: "https://via.placeholder.com/150",
-            },
-            qty,
-          };
-        }
-        return { product, qty };
-      })
+      .filter(([id]) => !!productData[id]) // skip items with no product data at all
+      .map(([id, qty]) => ({ product: productData[id], qty }))
 );
 
 /** Subtotal (before delivery) */
