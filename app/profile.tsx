@@ -85,9 +85,7 @@ export default function ProfileScreen() {
           />
           <MenuItem
             title="Your orders"
-            onPress={() => {
-              /* orders tab */
-            }}
+            onPress={() => router.push("/(tabs)/orders" as any)}
           />
         </View>
 
@@ -102,7 +100,7 @@ export default function ProfileScreen() {
           <MenuItem title="Share the app" onPress={handleShare} />
           <MenuItem
             title="Notification preferences"
-            onPress={() => { }}
+            onPress={() => Alert.alert("Coming Soon", "Notification preferences will be available in a future update.")}
           />
         </View>
 

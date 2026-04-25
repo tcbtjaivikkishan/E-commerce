@@ -12,6 +12,7 @@ export const AppConfig = {
   CDN_BASE_URL: "https://cdn2.zohoecommerce.com",
   STOREFRONT_DOMAIN: "products.tcbtjaivikkisan.com",
 
+  
 
   /** Feature flags */
   FEATURES: {

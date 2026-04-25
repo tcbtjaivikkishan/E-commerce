@@ -52,11 +52,11 @@ export default function Header({
       <View style={styles.topRow}>
         <View style={styles.brandBlock}>
           <Text style={styles.brandName}>Jaivik Mart</Text>
-          <Text style={styles.deliveryTime}>2-3 days</Text>
+          <Text style={styles.deliveryTime}>3-5 days</Text>
           <View style={styles.locationRow}>
-            <Text style={styles.homeText}>HOME</Text>
+            <Text style={styles.homeText}>Fully</Text>
             <Text style={styles.locationSep}> – </Text>
-            <Text style={styles.locationText}>Ranjhi, Jabalpur</Text>
+            <Text style={styles.locationText}>Organic Products</Text>
             <Text style={styles.dropdownArrow}> ▾</Text>
           </View>
         </View>
