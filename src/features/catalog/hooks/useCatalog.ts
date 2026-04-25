@@ -20,6 +20,7 @@ export const useCatalog = () => {
         fetchCategories(),
         fetchAllProducts(),
       ]);
+      
 
       // 🔥 Group products by category_id
       const grouped: Record<string, ApiProductResponse[]> = {};

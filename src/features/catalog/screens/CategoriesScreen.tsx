@@ -29,6 +29,7 @@ interface Category {
   id: string;
   title: string;
   items: CategoryItem[];
+  totalItems: number;
 }
 
 const { width } = Dimensions.get("window");
@@ -36,7 +37,7 @@ const CARD_SIZE = (width - 48) / 4;
 
 // ─── Helpers ───────────────────────────────────────
 
-const getImageUrl = (p: any): string => {
+const getImageUrl = (p: any): string | null => {
   if (p.image_url) return p.image_url;
   if (p.image) return p.image;
   if (p.image_document_id && p.image_name) {
@@ -57,7 +58,11 @@ const ProductCard: React.FC<{
   >
     <View style={styles.cardImageBox}>
       {item.image ? (
-        <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="contain" />
+        <Image
+          source={{ uri: item.image }}
+          style={styles.cardImage}
+          resizeMode="contain"
+        />
       ) : (
         <View style={styles.cardImagePlaceholder} />
       )}
@@ -76,14 +81,26 @@ const CategorySection: React.FC<{
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{category.title}</Text>
-      <TouchableOpacity>
-        <Text style={styles.seeAll}>See All</Text>
-      </TouchableOpacity>
+
+      {/* ✅ Show only if more items exist */}
+      {category.totalItems > 8 && (
+        <TouchableOpacity
+          onPress={() =>
+            router.push(`/category/${category.id}` as any)
+          }
+        >
+          <Text style={styles.seeAll}>See All</Text>
+        </TouchableOpacity>
+      )}
     </View>
 
     <View style={styles.grid}>
       {category.items.map((item) => (
-        <ProductCard key={item.id} item={item} onPress={onProductPress} />
+        <ProductCard
+          key={item.id}
+          item={item}
+          onPress={onProductPress}
+        />
       ))}
     </View>
   </View>
@@ -101,16 +118,25 @@ export default function CategoryScreen(): React.JSX.Element {
       try {
         setLoading(true);
 
-        const [cats, products] = await Promise.all([
+        const [catsRes, productsRes] = await Promise.all([
           fetchAllCategories(),
           fetchAllProducts(),
         ]);
 
+        const cats = catsRes.data || catsRes;
+        const products = productsRes.data || productsRes;
+        console.log("CATS:", cats);
+        console.log("PRODUCTS:", products);
+        console.log("PRODUCTS SAMPLE:", products[0]);
+        console.log("CATS SAMPLE:", cats[0]);
         // 🔥 Group products by category
         const grouped: Record<string, CategoryItem[]> = {};
 
         products.forEach((p: any) => {
-          const catId = p.category_id || "other";
+          // ✅ Ignore products without category
+          if (!p.category_id) return;
+
+          const catId = p.category_id;
 
           if (!grouped[catId]) grouped[catId] = [];
 
@@ -122,19 +148,25 @@ export default function CategoryScreen(): React.JSX.Element {
           });
         });
 
-        // 🔥 Map into your UI structure
-       const finalCategories: Category[] = cats
-  .map((c: any) => {
-    const items = grouped[c.id] || [];
+        // ✅ Filter valid categories
+        const validCategories = cats.filter(
+          (c: any) => c.id && c.name
+        );
 
-    return {
-      id: c.id,
-      title: c.name,
-      items: items.slice(0, 8),
-      totalItems: items.length, // 👈 important for sorting
-    };
-  })
-  .sort((a, b) => b.totalItems - a.totalItems); // 👈 DESC order
+        // 🔥 Map into UI structure
+        const finalCategories: Category[] = validCategories
+          .map((c: any) => {
+  const items = grouped[c.id] || []; // ✅ FIX HERE
+
+  return {
+    id: c.id, // ✅ FIX HERE
+    title: c.name,
+    items: items.slice(0, 8),
+    totalItems: items.length,
+  };
+})
+          .filter((c) => c.totalItems > 0) // remove empty
+          .sort((a, b) => b.totalItems - a.totalItems);
 
         if (mounted) setCategories(finalCategories);
       } catch (err) {
@@ -156,7 +188,11 @@ export default function CategoryScreen(): React.JSX.Element {
   if (loading) {
     return (
       <View style={styles.safeArea}>
-        <ActivityIndicator style={{ marginTop: 50 }} size="large" color="#0F7B3C" />
+        <ActivityIndicator
+          style={{ marginTop: 50 }}
+          size="large"
+          color="#0F7B3C"
+        />
       </View>
     );
   }
@@ -189,7 +225,7 @@ export default function CategoryScreen(): React.JSX.Element {
   );
 }
 
-// ─── Styles (UNCHANGED) ───────────────────────────
+// ─── Styles ───────────────────────────────────────
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
 
@@ -209,7 +245,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1A1A1A",
   },
-  seeAll: { fontSize: 12, color: "#196F1B", fontWeight: "600" },
+  seeAll: {
+    fontSize: 12,
+    color: "#196F1B",
+    fontWeight: "600",
+  },
 
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   card: { width: CARD_SIZE, alignItems: "center" },

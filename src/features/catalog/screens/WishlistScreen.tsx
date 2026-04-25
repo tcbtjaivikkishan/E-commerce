@@ -71,16 +71,39 @@ export default function WishlistScreen() {
     });
   }, []);
 
-  // Build displayable products from API wishlist items
-  const products = wishlistItems.map((item) => ({
+  const getImageUrl = (p: any) => {
+  if (!p) return "https://via.placeholder.com/150";
+
+  return (
+    p.image_url ||
+    p.image ||
+    (p.image_name && p.image_document_id
+      ? `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`
+      : "https://via.placeholder.com/150")
+  );
+};
+
+const products = wishlistItems.map((item) => {
+  const p = item.product || {};
+
+  return {
     id: item.zoho_item_id,
-    name: item.product?.name || "Unknown Product",
-    price: item.product?.price || 0,
-    mrp: item.product?.mrp || null,
-    weight: item.product?.unit || item.product?.weight_with_unit || "350 g",
-    image: item.product?.image_url || null,
-    ...item.product,
-  }));
+
+    // ✅ safer fallbacks
+    name: p.name || p.item_name || "Product",
+    price: p.price ?? p.rate ?? 0,
+    mrp: p.mrp ?? p.label_rate ?? null,
+
+    weight:
+      p.unit ||
+      p.weight_with_unit ||
+      (p.weight ? `${p.weight} g` : "—"),
+
+    image: getImageUrl(p),
+
+    raw: p, // optional debug
+  };
+});
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -191,7 +214,7 @@ export default function WishlistScreen() {
 
                   {/* Product Image */}
                   <Image
-                    source={{ uri: getImage(p) }}
+                    source={{ uri: p.image }}
                     style={styles.productImg}
                     resizeMode="contain"
                   />
