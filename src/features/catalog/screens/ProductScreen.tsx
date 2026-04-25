@@ -91,10 +91,12 @@ export default function ProductScreen() {
   const [product, setProduct] = useState<any>(null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
-  const [selectedVariant, setSelectedVariant] = useState<"500g" | "1kg">("500g");
+  const [selectedVariant, setSelectedVariant] = useState<"500g" | "1kg">(
+    "500g"
+  );
 
-  // ─── Fetch ─────────────────────────────
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -103,19 +105,22 @@ export default function ProductScreen() {
         const p = await fetchProductById(id || "");
         if (mounted) setProduct(p);
 
-        const all = await fetchAllProducts();
-        if (mounted) {
-          setSimilarProducts(
-            all.filter((item: any) => getProductId(item) !== (id || "")).slice(0, 6)
-          );
-        }
+        // Fetch similar products
+        try {
+          const all = await fetchAllProducts();
+          if (mounted) {
+            setSimilarProducts(
+              all.filter((item: any) => getProductId(item) !== (id || "")).slice(0, 6)
+            );
+          }
+        } catch {}
       } catch (err: any) {
         console.warn("Failed to load product:", err.message);
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false };
+    return () => { mounted = false; };
   }, [id]);
 
   // ⚠️ ALL hooks must be called before any early return!
@@ -159,16 +164,21 @@ export default function ProductScreen() {
   const displayPrice =
     selectedVariant === "500g" ? price : Math.round(price * 1.9);
 
-  // ─── UI ─────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.iconBtn}
-          onPress={() => (router.canGoBack() ? router.back() : router.push("/home"))}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push("/home");
+            }
+          }}
+          activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
         </TouchableOpacity>
@@ -178,7 +188,11 @@ export default function ProductScreen() {
         </Text>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn} onPress={handleWishlist}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={handleWishlist}
+            activeOpacity={0.7}
+          >
             <Ionicons
               name={wishlisted ? "heart" : "heart-outline"}
               size={20}
@@ -186,30 +200,152 @@ export default function ProductScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push("/search" as any)}
+            activeOpacity={0.7}
+          >
+            <Feather name="search" size={20} color="#1A1A1A" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={handleShare}
+            activeOpacity={0.7}
+          >
             <Feather name="share-2" size={20} color="#1A1A1A" />
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* CONTENT */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 140 }}
+      >
         <View style={styles.imageContainer}>
+          <View style={styles.organicBadge}>
+            <MaterialIcons name="eco" size={12} color="#0F7B3C" />
+            <Text style={styles.organicBadgeText}>100% Organic</Text>
+          </View>
+
           <Image source={{ uri: imageUrl }} style={styles.image} />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.title}>{product.name}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{product.name}</Text>
+          </View>
 
-          <Text style={styles.priceMain}>₹{displayPrice}</Text>
+          <View style={styles.priceCartRow}>
+            <View>
+              <Text style={styles.priceLabel}>Price</Text>
+              <Text style={styles.priceMain}>₹{displayPrice}</Text>
+            </View>
 
-          <QtyControl
-            qty={qty}
-            onAdd={() => add(productId)}
-            onRemove={() => remove(productId)}
-          />
+            <QtyControl
+              qty={qty}
+              onAdd={() => add(productId)}
+              onRemove={() => remove(productId)}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.subText}>Select Unit</Text>
+          <View style={styles.variantRow}>
+            {(["500g", "1kg"] as const).map((v) => (
+              <TouchableOpacity
+                key={v}
+                style={[
+                  styles.variantBox,
+                  selectedVariant === v && styles.activeVariant,
+                ]}
+                onPress={() => setSelectedVariant(v)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.variantText,
+                    selectedVariant === v && styles.activeVariantText,
+                  ]}
+                >
+                  {v}
+                </Text>
+                <Text
+                  style={[
+                    styles.variantPrice,
+                    selectedVariant === v && styles.activeVariantPrice,
+                  ]}
+                >
+                  ₹{v === "500g" ? price : Math.round(price * 1.9)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
+
+        {similarProducts.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Similar Products</Text>
+
+            <View style={styles.grid}>
+              {similarProducts.map((item: any) => {
+                const img = getImageUrl(item);
+                const itemId = getProductId(item);
+                const itemQty = getQty(itemId);
+
+                return (
+                  <TouchableOpacity
+                    key={itemId}
+                    style={styles.productCard}
+                    onPress={() => router.push(`/product/${itemId}`)}
+                    activeOpacity={0.85}
+                  >
+                    <Image source={{ uri: img }} style={styles.productImage} />
+
+                    <Text numberOfLines={2} style={styles.productName}>
+                      {item.name}
+                    </Text>
+
+                    <View style={styles.productBottom}>
+                      <QtyControl
+                        qty={itemQty}
+                        onAdd={() => add(itemId)}
+                        onRemove={() => remove(itemId)}
+                        small
+                      />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
       </ScrollView>
+
+      <View style={styles.bottomBar}>
+        <View style={styles.bottomLeft}>
+          <Text style={styles.bottomLabel}>Total</Text>
+          <Text style={styles.bottomPrice}>
+            ₹{displayPrice * (qty || 1)}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.addToCart, qty > 0 && styles.addToCartActive]}
+          onPress={() => add(productId)}
+          activeOpacity={0.85}
+        >
+          {qty > 0 ? (
+            <QtyControl
+              qty={qty}
+              onAdd={() => add(productId)}
+              onRemove={() => remove(productId)}
+            />
+          ) : (
+            <Text style={styles.addText}>Add to Cart</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
