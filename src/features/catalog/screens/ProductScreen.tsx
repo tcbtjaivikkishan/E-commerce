@@ -118,38 +118,27 @@ export default function ProductScreen() {
     return () => { mounted = false };
   }, [id]);
 
-  // ─── Safe derived values ─────────────────
-  const productId = product ? getProductId(product) : "";
-  const imageUrl = product ? getImageUrl(product) : "";
-  const price = product ? getProductPrice(product) : 0;
-  const qty = product ? getQty(productId) : 0;
-
-  // ─── Hooks (ALWAYS top-level) ────────────
+  // ⚠️ ALL hooks must be called before any early return!
   const handleWishlist = useCallback(() => {
-    if (!product) return;
-
     setWishlisted((prev) => !prev);
     Alert.alert(
       wishlisted ? "Removed from Wishlist" : "Added to Wishlist",
       wishlisted
-        ? `${product.name} removed from your wishlist.`
-        : `${product.name} saved to your wishlist!`
+        ? `${product?.name} removed from your wishlist.`
+        : `${product?.name} saved to your wishlist!`
     );
-  }, [wishlisted, product]);
+  }, [wishlisted, product?.name]);
 
   const handleShare = useCallback(async () => {
-    if (!product) return;
-
     try {
       await Share.share({
-        title: product.name,
-        message: `Check out ${product.name} on Jaivik Mart!\n\nPrice: ₹${price}`,
-        url: imageUrl,
+        title: product?.name,
+        message: `Check out ${product?.name} on Jaivik Mart!\n\nPrice: ₹${product?.price || 0}\n\nShop fresh & organic products at Jaivik Mart.`,
+        url: getImageUrl(product),
       });
-    } catch {}
-  }, [product, price, imageUrl]);
+    } catch (e) {}
+  }, [product]);
 
-  // ─── UI guards AFTER hooks ───────────────
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -160,15 +149,12 @@ export default function ProductScreen() {
     );
   }
 
-  if (!product) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={{ textAlign: "center", marginTop: 50 }}>
-          Product not found
-        </Text>
-      </SafeAreaView>
-    );
-  }
+  if (!product) return null;
+
+  const productId = getProductId(product);
+  const imageUrl = getImageUrl(product);
+  const qty = getQty(productId);
+  const price = getProductPrice(product);
 
   const displayPrice =
     selectedVariant === "500g" ? price : Math.round(price * 1.9);

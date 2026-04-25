@@ -6,9 +6,7 @@ export default function CheckoutLayout() {
       headerShown: false,
     }}>
       <Stack.Screen name="address" />
-      <Stack.Screen name="payment" />
       <Stack.Screen name="success" />
     </Stack>
   );
 }
-

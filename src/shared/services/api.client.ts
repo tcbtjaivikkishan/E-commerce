@@ -85,7 +85,10 @@ export async function apiRequest<T>(
     }
   }
 
-  let response = await fetch(`${BASE_URL}${endpoint}`, {
+  const url = `${BASE_URL}${endpoint}`;
+  console.log(`[API] ${method} ${url}`, body ? JSON.stringify(body) : '');
+
+  let response = await fetch(url, {
     method,
     headers: requestHeaders,
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -131,7 +134,10 @@ export async function apiRequest<T>(
     data = {};
   }
 
+  console.log(`[API] ${method} ${endpoint} → ${response.status}`, JSON.stringify(data).substring(0, 500));
+
   if (!response.ok) {
+    console.error(`[API] ERROR ${response.status}:`, JSON.stringify(data));
     throw new ApiError(
       response.status,
       data?.message || data?.error || `API Error: ${response.status}`,

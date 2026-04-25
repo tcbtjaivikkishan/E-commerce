@@ -37,7 +37,8 @@ export default function AddressScreen() {
       return;
     }
     updateAddress(form);
-    router.push('/checkout/payment');
+    // Payment is handled directly from CartScreen via Zoho checkout
+    router.back();
   };
 
   return (

@@ -1,6 +1,8 @@
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Image,
   Modal,
@@ -14,14 +16,20 @@ import {
 import { SvgXml } from "react-native-svg";
 
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
+import { useOrder } from "../../checkout/hooks/useOrder";
+import {
+  calculateShippingRate,
+  type ShippingRateResponse,
+} from "../../checkout/services/shipping.api";
+import { openCheckout, pollPaymentStatus } from "../../checkout/services/zoho-payments";
+import { setTempAddress, setTempAddressId } from "../../checkout/store/orderSlice";
 import {
   addItem,
   removeItem,
   selectCartItems,
   selectCartProducts,
-  selectDeliveryFee,
   selectSubtotal,
-  selectTotal,
+  selectTotalWeightGrams,
   updateItemAsync,
 } from "../store/cartSlice";
 
@@ -68,12 +76,16 @@ function AddressBottomSheet({
   selectedIdx,
   onSelect,
   onClose,
+  onPlaceOrder,
+  isProcessing,
 }: {
   visible: boolean;
   addresses: any[];
   selectedIdx: number;
   onSelect: (idx: number) => void;
   onClose: () => void;
+  onPlaceOrder: () => void;
+  isProcessing?: boolean;
 }) {
 
   return (
@@ -157,8 +169,20 @@ function AddressBottomSheet({
         </ScrollView>
 
         {/* CTA */}
-        <TouchableOpacity style={styles.sheetCta} onPress={onClose}>
-          <Text style={styles.sheetCtaText}>Select payment option</Text>
+        <TouchableOpacity
+          style={[styles.sheetCta, isProcessing && styles.sheetCtaDisabled]}
+          onPress={onPlaceOrder}
+          disabled={isProcessing}
+          activeOpacity={0.88}
+        >
+          {isProcessing ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.sheetCtaText}>Processing…</Text>
+            </View>
+          ) : (
+            <Text style={styles.sheetCtaText}>Place Order</Text>
+          )}
         </TouchableOpacity>
       </View>
     </Modal>
@@ -276,22 +300,185 @@ function CartItem({ item }: any) {
   );
 }
 
+// ─── Shipping state shape ────────────────────────────────────────────────────
+type ShippingState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: ShippingRateResponse }
+  | { status: 'error'; message: string };
+
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export default function CartScreen() {
+  const dispatch = useAppDispatch();
   const cartItems = useAppSelector(selectCartProducts);
   const subtotal = useAppSelector(selectSubtotal);
-  const deliveryFee = useAppSelector(selectDeliveryFee);
-  const total = useAppSelector(selectTotal);
+  const totalWeightG = useAppSelector(selectTotalWeightGrams);
   const userAddresses = useAppSelector((state) => state.user.addresses) || [];
 
   const isEmpty = cartItems.length === 0;
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [selectedAddressIdx, setSelectedAddressIdx] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const { submitOrderAsync } = useOrder();
 
   const addresses = userAddresses;
   const selectedAddress = addresses[selectedAddressIdx] ?? addresses[0] ?? null;
-  
+
+  // ── Live shipping rate ────────────────────────────────────────────────────
+  const [shipping, setShipping] = useState<ShippingState>({ status: 'idle' });
+
+  useEffect(() => {
+    console.log('[SHIPPING DEBUG] selectedAddress:', JSON.stringify(selectedAddress));
+    console.log('[SHIPPING DEBUG] cartItems.length:', cartItems.length);
+    const pincode = Number(selectedAddress?.pincode);
+    console.log('[SHIPPING DEBUG] parsed pincode:', pincode, 'raw:', selectedAddress?.pincode);
+    if (!pincode || cartItems.length === 0) {
+      console.log('[SHIPPING DEBUG] GUARD BLOCKED → idle. pincode:', pincode, 'items:', cartItems.length);
+      setShipping({ status: 'idle' });
+      return;
+    }
+    console.log('[SHIPPING DEBUG] FETCHING shipping rate... weight:', totalWeightG, 'pincode:', pincode);
+    let cancelled = false;
+    setShipping({ status: 'loading' });
+    calculateShippingRate(totalWeightG, pincode)
+      .then((res) => {
+        console.log('[SHIPPING DEBUG] API RESPONSE:', JSON.stringify(res), 'cancelled:', cancelled);
+        if (!cancelled) setShipping({ status: 'success', data: res });
+      })
+      .catch((err: any) => {
+        console.log('[SHIPPING DEBUG] API ERROR:', err?.message, 'cancelled:', cancelled);
+        if (!cancelled)
+          setShipping({ status: 'error', message: err?.message ?? 'Could not fetch rate' });
+      });
+    return () => {
+      console.log('[SHIPPING DEBUG] CLEANUP → cancelled = true');
+      cancelled = true;
+    };
+    // Use a stable string key (not the object ref) to avoid infinite re-runs
+  }, [cartItems.length, selectedAddress?.pincode, selectedAddress?._id]);
+
+  const shippingCharge =
+    shipping.status === 'success' ? shipping.data.shippingCharge : 0;
+  const grandTotal = subtotal + shippingCharge;
+
+  // ── Sync selected address into orderSlice whenever it changes ──────────────
+  useEffect(() => {
+    if (!selectedAddress) return;
+    // Store the address _id for the POST /orders call
+    if (selectedAddress._id) {
+      dispatch(setTempAddressId(selectedAddress._id));
+    }
+    dispatch(
+      setTempAddress({
+        name: selectedAddress.receiver_name || selectedAddress.label || "Customer",
+        phone: selectedAddress.receiver_phone || selectedAddress.phone || "",
+        street: selectedAddress.line1 || "",
+        city: selectedAddress.city || "",
+        state: selectedAddress.state || "",
+        pincode: selectedAddress.pincode || "",
+      })
+    );
+  }, [selectedAddress, dispatch]);
+
+  // ── Place Order → Zoho Checkout (skips PaymentScreen) ──────────────────────
+  const handlePlaceOrder = async () => {
+    if (!selectedAddress || isProcessing) return;
+
+    try {
+      setIsProcessing(true);
+
+      // 1. Create order on backend → returns orderId + paymentSessionId
+      console.log('[CHECKOUT] Creating order...');
+      console.log('[CHECKOUT] Selected address:', JSON.stringify(selectedAddress));
+      console.log('[CHECKOUT] Address _id:', selectedAddress?._id);
+
+      // Debug: check what the backend cart looks like
+      try {
+        const { fetchCart } = await import('../../cart/services/cart.api');
+        const backendCart = await fetchCart();
+        console.log('[CHECKOUT] Backend cart before order:', JSON.stringify(backendCart));
+        console.log('[CHECKOUT] Backend cart items count:', backendCart?.items?.length);
+      } catch (cartErr: any) {
+        console.warn('[CHECKOUT] Could not fetch backend cart:', cartErr?.message);
+      }
+
+      // Local cart state
+      console.log('[CHECKOUT] Local cart items:', JSON.stringify(cartItems.map((i: any) => ({
+        id: i.product?.id || i.product?.item_id,
+        name: i.product?.name,
+        qty: i.qty,
+      }))));
+
+      let result;
+      try {
+        result = await submitOrderAsync();
+      } catch (orderErr: any) {
+        console.error('[CHECKOUT] submitOrderAsync threw:', orderErr);
+        console.error('[CHECKOUT] Error type:', typeof orderErr);
+        console.error('[CHECKOUT] Error keys:', orderErr ? Object.keys(orderErr) : 'null');
+        console.error('[CHECKOUT] Error message:', orderErr?.message);
+        console.error('[CHECKOUT] Error string:', String(orderErr));
+        throw new Error(
+          orderErr?.message || String(orderErr) || 'Failed to create order'
+        );
+      }
+
+      console.log('[CHECKOUT] Order result:', JSON.stringify(result));
+      const { orderId, paymentSessionId } = result;
+      console.log('[CHECKOUT] Order created:', orderId, 'session:', paymentSessionId);
+
+      if (!paymentSessionId) {
+        throw new Error('No payment session received from server');
+      }
+
+      // 2. Open Zoho Payments checkout
+      console.log('[CHECKOUT] Opening Zoho checkout...');
+      setSheetVisible(false); // close address sheet if open
+
+      const paymentResult = await openCheckout(paymentSessionId);
+      console.log('[CHECKOUT] Payment result:', paymentResult.status);
+
+      if (paymentResult.status === 'cancelled') {
+        Alert.alert('Payment Cancelled', 'You can try again when ready.');
+        return;
+      }
+
+      if (paymentResult.status === 'failed') {
+        Alert.alert(
+          'Payment Failed',
+          paymentResult.errorMessage || 'Please try again.',
+        );
+        return;
+      }
+
+      // 3. Payment success → poll backend to confirm webhook
+      console.log('[CHECKOUT] Verifying payment...');
+      const finalStatus = await pollPaymentStatus(orderId);
+      console.log('[CHECKOUT] Final status:', finalStatus);
+
+      if (finalStatus === 'paid' || finalStatus === 'pending') {
+        router.push('/checkout/success');
+      } else {
+        Alert.alert(
+          'Payment Issue',
+          'Your payment could not be verified. Contact support if money was deducted.',
+        );
+      }
+    } catch (err: any) {
+      console.error('[CHECKOUT] Final catch error:', err);
+      console.error('[CHECKOUT] Error message:', err?.message);
+      console.error('[CHECKOUT] Error string:', String(err));
+      Alert.alert(
+        'Order Failed',
+        err?.message || String(err) || 'Could not place order. Please try again.',
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -352,15 +539,36 @@ export default function CartScreen() {
               </View>
 
               <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Delivery charge</Text>
-                <Text style={styles.billValue}>₹{deliveryFee}</Text>
+                <View>
+                  <Text style={styles.billLabel}>Delivery charge</Text>
+                  {shipping.status === 'success' && shipping.data.courier ? (
+                    <Text style={styles.courierTag}>
+                      {shipping.data.courier} · {shipping.data.estimatedDelivery}
+                    </Text>
+                  ) : null}
+                </View>
+                {shipping.status === 'loading' ? (
+                  <ActivityIndicator size="small" color="#196F1B" />
+                ) : shipping.status === 'success' ? (
+                  <Text style={[styles.billValue, shippingCharge === 0 && styles.billValueFree]}>
+                    {shippingCharge === 0 ? 'FREE' : `₹${shippingCharge}`}
+                  </Text>
+                ) : shipping.status === 'error' ? (
+                  <Text style={styles.billValueError}>–</Text>
+                ) : (
+                  <Text style={styles.billValue}>–</Text>
+                )}
               </View>
+
+              {shipping.status === 'error' && (
+                <Text style={styles.shippingErrorText}>⚠️ {shipping.message}</Text>
+              )}
 
               <View style={styles.divider} />
 
               <View style={styles.billRow}>
                 <Text style={styles.billLabelBold}>Grand Total</Text>
-                <Text style={styles.billValueBold}>₹{total}</Text>
+                <Text style={styles.billValueBold}>₹{grandTotal}</Text>
               </View>
             </View>
 
@@ -421,15 +629,24 @@ export default function CartScreen() {
               </View>
             )}
 
-            {/* Payment button */}
+            {/* Place Order button */}
             <TouchableOpacity
               style={[
                 styles.paymentBtn,
-                addresses.length === 0 && styles.paymentBtnDisabled,
+                (addresses.length === 0 || isProcessing) && styles.paymentBtnDisabled,
               ]}
-              disabled={addresses.length === 0}
+              disabled={addresses.length === 0 || isProcessing}
+              onPress={handlePlaceOrder}
+              activeOpacity={0.88}
             >
-              <Text style={styles.paymentBtnText}>Select payment option</Text>
+              {isProcessing ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.paymentBtnText}>Processing…</Text>
+                </View>
+              ) : (
+                <Text style={styles.paymentBtnText}>Place Order · ₹{grandTotal}</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -440,6 +657,8 @@ export default function CartScreen() {
             selectedIdx={selectedAddressIdx}
             onSelect={(idx) => setSelectedAddressIdx(idx)}
             onClose={() => setSheetVisible(false)}
+            onPlaceOrder={handlePlaceOrder}
+            isProcessing={isProcessing}
           />
         </>
       )}
@@ -516,6 +735,10 @@ const styles = StyleSheet.create({
   },
   billLabel: { color: "#444" },
   billValue: { color: "#444" },
+  billValueFree: { color: "#196F1B", fontWeight: "600" },
+  billValueError: { color: "#EF4444", fontWeight: "600" },
+  courierTag: { fontSize: 11, color: "#196F1B", marginTop: 2, fontWeight: "500" },
+  shippingErrorText: { fontSize: 11, color: "#92400E", marginBottom: 4 },
   billLabelBold: { fontWeight: "700" },
   billValueBold: { fontWeight: "700" },
 
@@ -806,5 +1029,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,
+  },
+
+  sheetCtaDisabled: {
+    backgroundColor: "#999",
   },
 });
