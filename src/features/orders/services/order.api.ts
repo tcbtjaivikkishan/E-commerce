@@ -62,11 +62,12 @@ export interface PaginatedOrdersResponse {
 
 /**
  * POST /orders — create order from cart [JWT]
+ * Backend expects: { addressId: "mongo_id" }
  */
-export async function createOrder(address: OrderAddress): Promise<CreateOrderResponse> {
+export async function createOrder(addressId: string): Promise<CreateOrderResponse> {
   return apiRequest<CreateOrderResponse>("/orders", {
     method: "POST",
-    body: { address },
+    body: { addressId },
   });
 }
 

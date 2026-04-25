@@ -10,8 +10,10 @@ import {
   selectOrderError,
   selectPaymentSessionId,
   selectTempAddress,
+  selectTempAddressId,
   selectTempPayment,
   setTempAddress,
+  setTempAddressId,
   setTempPayment,
 } from "../store/orderSlice";
 import type { OrderAddress, OrderPayment } from "../types/order.types";
@@ -21,6 +23,7 @@ export function useOrder() {
   const dispatch = useAppDispatch();
 
   const tempAddress = useAppSelector(selectTempAddress);
+  const tempAddressId = useAppSelector(selectTempAddressId);
   const tempPayment = useAppSelector(selectTempPayment);
   const currentOrder = useAppSelector(selectCurrentOrder);
   const status = useAppSelector(selectOrderStatus);
@@ -30,6 +33,13 @@ export function useOrder() {
   const updateAddress = useCallback(
     (address: Partial<OrderAddress>) => {
       dispatch(setTempAddress(address));
+    },
+    [dispatch]
+  );
+
+  const updateAddressId = useCallback(
+    (id: string) => {
+      dispatch(setTempAddressId(id));
     },
     [dispatch]
   );
@@ -45,11 +55,11 @@ export function useOrder() {
     dispatch(clearTempData());
   }, [dispatch]);
 
-  /** Place order via backend API */
+  /** Place order via backend API — sends addressId */
   const submitOrderAsync = useCallback(async () => {
-    if (!tempAddress) throw new Error("Address is required");
-    return dispatch(placeOrderAsync(tempAddress as OrderAddress)).unwrap();
-  }, [dispatch, tempAddress]);
+    if (!tempAddressId) throw new Error("Address ID is required");
+    return dispatch(placeOrderAsync(tempAddressId)).unwrap();
+  }, [dispatch, tempAddressId]);
 
   /** Legacy local order placement */
   const submitOrder = useCallback(
@@ -63,20 +73,18 @@ export function useOrder() {
     dispatch(resetOrder());
   }, [dispatch]);
 
-  const isReadyToPlace = !!(
-    tempAddress &&
-    Object.keys(tempAddress).length === 6 &&
-    tempPayment?.method
-  );
+  const isReadyToPlace = !!(tempAddressId && tempAddress);
 
   return {
     tempAddress,
+    tempAddressId,
     tempPayment,
     currentOrder,
     status,
     error,
     paymentSessionId,
     updateAddress,
+    updateAddressId,
     updatePayment,
     clearTemp,
     submitOrder,

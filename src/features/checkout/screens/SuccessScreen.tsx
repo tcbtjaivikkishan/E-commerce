@@ -87,6 +87,7 @@ export default function SuccessScreen() {
         </View>
 
         {/* Delivery address */}
+        {currentOrder.address && (
         <View style={s.card}>
           <Text style={s.cardTitle}>DELIVERY ADDRESS</Text>
 
@@ -98,6 +99,7 @@ export default function SuccessScreen() {
           <View style={s.divider} />
           <Text style={s.addrPhone}>{currentOrder.address.phone}</Text>
         </View>
+        )}
 
         {/* Status steps */}
         <View style={s.card}>

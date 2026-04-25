@@ -11,8 +11,7 @@ export interface OrderAddress {
 }
 
 export interface OrderPayment {
-  method: 'cod' | 'upi' | 'card';
-  upiId?: string;
+  method: 'online' | 'cod';
 }
 
 export interface OrderSummary {

@@ -2,11 +2,12 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { OrderAddress, OrderPayment, OrderSummary } from "../types/order.types";
 import type { RootState } from "../../../store/store";
-import { createOrder, type OrderAddress as ApiOrderAddress } from "../../orders/services/order.api";
+import { createOrder } from "../../orders/services/order.api";
 
 // ─── State ───
 interface OrderState {
   tempAddress: Partial<OrderAddress> | null;
+  tempAddressId: string | null;
   tempPayment: Partial<OrderPayment> | null;
   currentOrder: OrderSummary | null;
   status: "idle" | "filling" | "placing" | "success" | "error";
@@ -16,6 +17,7 @@ interface OrderState {
 
 const initialState: OrderState = {
   tempAddress: null,
+  tempAddressId: null,
   tempPayment: null,
   currentOrder: null,
   status: "idle",
@@ -27,21 +29,17 @@ const initialState: OrderState = {
 export const placeOrderAsync = createAsyncThunk(
   "order/placeAsync",
   async (
-    address: OrderAddress,
+    addressId: string,
     { rejectWithValue }
   ) => {
     try {
-      // Map local address shape to API address shape
-      const apiAddress: ApiOrderAddress = {
-        name: address.name,
-        phone: address.phone,
-        pincode: address.pincode,
-        city: address.city,
-        state: address.state,
-        addressLine: address.street,
-      };
-      return await createOrder(apiAddress);
+      console.log('[ORDER THUNK] Calling createOrder with addressId:', addressId);
+      const response = await createOrder(addressId);
+      console.log('[ORDER THUNK] createOrder response:', JSON.stringify(response));
+      return response;
     } catch (err: any) {
+      console.error('[ORDER THUNK] createOrder failed:', err);
+      console.error('[ORDER THUNK] Error message:', err?.message);
       return rejectWithValue(err.message || "Failed to place order");
     }
   }
@@ -55,11 +53,15 @@ export const orderSlice = createSlice({
     setTempAddress: (state, action: PayloadAction<Partial<OrderAddress>>) => {
       state.tempAddress = { ...state.tempAddress, ...action.payload };
     },
+    setTempAddressId: (state, action: PayloadAction<string>) => {
+      state.tempAddressId = action.payload;
+    },
     setTempPayment: (state, action: PayloadAction<Partial<OrderPayment>>) => {
       state.tempPayment = { ...state.tempPayment, ...action.payload };
     },
     clearTempData(state) {
       state.tempAddress = null;
+      state.tempAddressId = null;
       state.tempPayment = null;
     },
     // Keep local placeOrder for offline/fallback
@@ -117,6 +119,7 @@ export const orderSlice = createSlice({
 
 export const {
   setTempAddress,
+  setTempAddressId,
   setTempPayment,
   clearTempData,
   placeOrder,
@@ -127,6 +130,7 @@ export default orderSlice.reducer;
 
 // ─── Selectors ───
 export const selectTempAddress = (state: RootState) => state.order?.tempAddress;
+export const selectTempAddressId = (state: RootState) => state.order?.tempAddressId;
 export const selectTempPayment = (state: RootState) => state.order?.tempPayment;
 export const selectCurrentOrder = (state: RootState) =>
   state.order?.currentOrder;

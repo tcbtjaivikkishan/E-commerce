@@ -64,8 +64,12 @@ export const updateItemAsync = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await updateCartItem(productId, quantity);
+      console.log(`[CART SYNC] PATCH item: ${productId}, qty: ${quantity}`);
+      const result = await updateCartItem(productId, quantity);
+      console.log('[CART SYNC] PATCH result:', JSON.stringify(result).substring(0, 300));
+      return result;
     } catch (err: any) {
+      console.error('[CART SYNC] PATCH failed:', err.message);
       return rejectWithValue(err.message || "Failed to update cart");
     }
   }
