@@ -1,10 +1,11 @@
 // src/features/catalog/screens/WishlistScreen.tsx
-// ─── Matches Figma screen_10: 3-col grid, checkbox, heart, ADD, weight, price ──
+// ─── Wishlist screen — 3-col grid with working add-to-cart + remove ──────────
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -23,6 +24,7 @@ import {
   selectWishlistItems,
   selectWishlistLoading,
 } from "../store/wishlistSlice";
+import { fetchAllProducts, getCachedProducts, type ApiProductResponse } from "../services/product.api";
 
 const { width } = Dimensions.get("window");
 const COL_GAP = 10;
@@ -32,13 +34,26 @@ const CARD_W = (width - H_PAD * 2 - COL_GAP * (COLS - 1)) / COLS;
 
 const GREEN = "#196F1B";
 
-// ─── Image helper ─────────────────────────────────────────────────────────────
-const getImage = (p: any) =>
-  p?.image_url ||
-  p?.image ||
-  (p?.image_name && p?.image_document_id
-    ? `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`
-    : "https://via.placeholder.com/150");
+// ─── Image helper (handles both string and object formats) ────────────────────
+const getImageUrl = (p: any): string => {
+  if (!p) return "https://via.placeholder.com/150";
+
+  // Top-level image_url (direct field on product)
+  if (p.image_url && typeof p.image_url === "string") return p.image_url;
+
+  // image can be string or object { image_url, image_key, ... }
+  if (p.image) {
+    if (typeof p.image === "string") return p.image;
+    if (p.image.image_url) return p.image.image_url;
+  }
+
+  // Fallback to CDN construction
+  if (p.image_name && p.image_document_id) {
+    return `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`;
+  }
+
+  return "https://via.placeholder.com/150";
+};
 
 export default function WishlistScreen() {
   const { add, remove, getQty } = useCart();
@@ -46,8 +61,7 @@ export default function WishlistScreen() {
   const isLoggedIn = useAppSelector((state) => state.user.isLoggedIn);
   const wishlistItems = useAppSelector(selectWishlistItems);
   const wishlistLoading = useAppSelector(selectWishlistLoading);
-
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [allProducts, setAllProducts] = useState<ApiProductResponse[]>(getCachedProducts());
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -55,62 +69,72 @@ export default function WishlistScreen() {
     }
   }, [dispatch, isLoggedIn]);
 
+  // Also fetch all products so we can enrich wishlist items if product data is missing
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchAllProducts();
+        if (Array.isArray(data)) setAllProducts(data);
+      } catch {}
+    })();
+  }, []);
+
   const handleRemove = useCallback(
     (id: string) => {
-      dispatch(removeWishlistItem(id));
+      Alert.alert(
+        "Remove from Wishlist",
+        "Are you sure you want to remove this item?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => dispatch(removeWishlistItem(id)),
+          },
+        ]
+      );
     },
     [dispatch]
   );
 
-  const toggleSelect = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
 
-  const getImageUrl = (p: any) => {
-  if (!p) return "https://via.placeholder.com/150";
+  // Map wishlist items to display-ready products
+  // The backend wishlist items may have:
+  //  - item.product (populated product data) OR
+  //  - just item.zoho_item_id (need to look up from allProducts)
+  const products = wishlistItems.map((item: any) => {
+    // Try to get product data from the wishlist item itself
+    let p = item.product || item;
 
-  return (
-    p.image_url ||
-    p.image ||
-    (p.image_name && p.image_document_id
-      ? `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`
-      : "https://via.placeholder.com/150")
-  );
-};
+    // If product data is missing/empty, look up from allProducts cache
+    if (!p.name && !p.item_name && item.zoho_item_id) {
+      const found = allProducts.find(
+        (ap: any) => ap.zoho_item_id === item.zoho_item_id || ap._id === item.zoho_item_id
+      );
+      if (found) p = found;
+    }
 
-const products = wishlistItems.map((item) => {
-  const p = item.product || {};
+    const id = item.zoho_item_id || p._id || p.zoho_item_id || "";
 
-  return {
-    id: item.zoho_item_id,
-
-    // ✅ safer fallbacks
-    name: p.name || p.item_name || "Product",
-    price: p.price ?? p.rate ?? 0,
-    mrp: p.mrp ?? p.label_rate ?? null,
-
-    weight:
-      p.unit ||
-      p.weight_with_unit ||
-      (p.weight ? `${p.weight} g` : "—"),
-
-    image: getImageUrl(p),
-
-    raw: p, // optional debug
-  };
-});
+    return {
+      id,
+      name: p.name || p.item_name || "Product",
+      price: p.price ?? p.rate ?? 0,
+      mrp: p.mrp ?? p.label_rate ?? null,
+      weight:
+        p.unit ||
+        p.weight_unit ||
+        p.weight_with_unit ||
+        (p.weight ? `${p.weight} ${p.weight_unit || "kg"}` : "—"),
+      image: getImageUrl(p),
+    };
+  });
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.container}>
-
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -170,7 +194,7 @@ const products = wishlistItems.map((item) => {
             {products.map((p) => {
               const id = p.id;
               const qty = getQty(id);
-              const isSelected = selected.has(id);
+              const hasDiscount = p.mrp && p.mrp > p.price;
 
               return (
                 <TouchableOpacity
@@ -179,28 +203,8 @@ const products = wishlistItems.map((item) => {
                   activeOpacity={0.9}
                   onPress={() => router.push(`/product/${id}` as any)}
                 >
-                  {/* Checkbox (top-left) */}
-                  <TouchableOpacity
-                    style={styles.checkbox}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      toggleSelect(id);
-                    }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <View
-                      style={[
-                        styles.checkboxBox,
-                        isSelected && styles.checkboxBoxChecked,
-                      ]}
-                    >
-                      {isSelected && (
-                        <Ionicons name="checkmark" size={12} color="#fff" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
 
-                  {/* Heart (top-right) */}
+                  {/* Remove / Heart (top-right) — filled red since it's in wishlist */}
                   <TouchableOpacity
                     style={styles.heartBtn}
                     onPress={(e) => {
@@ -209,7 +213,7 @@ const products = wishlistItems.map((item) => {
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="heart-outline" size={16} color="#999" />
+                    <Ionicons name="heart" size={16} color="#E53935" />
                   </TouchableOpacity>
 
                   {/* Product Image */}
@@ -219,9 +223,26 @@ const products = wishlistItems.map((item) => {
                     resizeMode="contain"
                   />
 
-                  {/* Weight + ADD row */}
-                  <View style={styles.weightAddRow}>
-                    <Text style={styles.weight}>{p.weight}</Text>
+                  {/* Product name */}
+                  <Text numberOfLines={2} style={styles.name}>
+                    {p.name}
+                  </Text>
+
+                  {/* Weight */}
+                  <Text style={styles.weight} numberOfLines={1}>
+                    {p.weight}
+                  </Text>
+
+                  {/* Price row */}
+                  <View style={styles.priceRow}>
+                    <Text style={styles.price}>₹{p.price}</Text>
+                    {hasDiscount && (
+                      <Text style={styles.mrp}>₹{p.mrp}</Text>
+                    )}
+                  </View>
+
+                  {/* ADD / Stepper */}
+                  <View style={styles.actionRow}>
                     {qty === 0 ? (
                       <TouchableOpacity
                         style={styles.addBtn}
@@ -229,6 +250,7 @@ const products = wishlistItems.map((item) => {
                           e.stopPropagation();
                           add(id);
                         }}
+                        activeOpacity={0.8}
                       >
                         <Text style={styles.addBtnText}>ADD</Text>
                       </TouchableOpacity>
@@ -256,19 +278,6 @@ const products = wishlistItems.map((item) => {
                       </View>
                     )}
                   </View>
-
-                  {/* Price row */}
-                  <View style={styles.priceRow}>
-                    <Text style={styles.price}>₹{p.price || 0}</Text>
-                    {p.mrp && p.mrp > (p.price || 0) && (
-                      <Text style={styles.mrp}>₹{p.mrp}</Text>
-                    )}
-                  </View>
-
-                  {/* Product name */}
-                  <Text numberOfLines={2} style={styles.name}>
-                    {p.name}
-                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -360,27 +369,6 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  /* Checkbox */
-  checkbox: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    zIndex: 2,
-  },
-  checkboxBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 3,
-    borderWidth: 1.5,
-    borderColor: "#CCC",
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxBoxChecked: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
-  },
 
   /* Heart */
   heartBtn: {
@@ -399,21 +387,43 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  /* Weight + ADD row */
-  weightAddRow: {
+  /* Name */
+  name: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#333",
+    lineHeight: 14,
+    marginBottom: 2,
+    minHeight: 28,
+  },
+
+  /* Weight */
+  weight: { fontSize: 10, color: "#888", marginBottom: 4 },
+
+  /* Price */
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 4,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  weight: { fontSize: 11, color: "#666", fontWeight: "500" },
+  price: { fontSize: 13, fontWeight: "700", color: "#111" },
+  mrp: {
+    fontSize: 10,
+    color: "#999",
+    textDecorationLine: "line-through",
+    marginLeft: 4,
+  },
+
+  /* ADD / Stepper area */
+  actionRow: {
+    marginTop: "auto",
+  },
   addBtn: {
     borderWidth: 1.5,
     borderColor: GREEN,
     borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignItems: "center",
     backgroundColor: "#fff",
   },
   addBtnText: { color: GREEN, fontWeight: "700", fontSize: 11 },
@@ -422,34 +432,18 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: GREEN,
     borderRadius: 6,
     overflow: "hidden",
   },
-  stepBtn: { paddingHorizontal: 6, paddingVertical: 4 },
-  stepText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  stepBtn: { paddingHorizontal: 8, paddingVertical: 5 },
+  stepText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   stepQty: {
     color: "#fff",
     fontSize: 11,
     fontWeight: "700",
-    minWidth: 14,
+    minWidth: 16,
     textAlign: "center",
   },
-
-  /* Price */
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  price: { fontSize: 12, fontWeight: "700", color: "#111" },
-  mrp: {
-    fontSize: 10,
-    color: "#999",
-    textDecorationLine: "line-through",
-    marginLeft: 4,
-  },
-
-  /* Name */
-  name: { fontSize: 10, color: "#333", lineHeight: 13 },
 });
