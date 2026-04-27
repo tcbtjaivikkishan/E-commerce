@@ -23,13 +23,13 @@ import {
 } from "../../checkout/services/shipping.api";
 import { openCheckout, pollPaymentStatus } from "../../checkout/services/zoho-payments";
 import { setTempAddress, setTempAddressId } from "../../checkout/store/orderSlice";
+import { fetchCart } from "../services/cart.api";
 import {
   addItem,
   removeItem,
   selectCartItems,
   selectCartProducts,
   selectSubtotal,
-  selectTotalWeightGrams,
   updateItemAsync,
 } from "../store/cartSlice";
 
@@ -78,6 +78,7 @@ function AddressBottomSheet({
   onClose,
   onPlaceOrder,
   isProcessing,
+  userPhone,
 }: {
   visible: boolean;
   addresses: any[];
@@ -86,6 +87,7 @@ function AddressBottomSheet({
   onClose: () => void;
   onPlaceOrder: () => void;
   isProcessing?: boolean;
+  userPhone?: string | null;
 }) {
 
   return (
@@ -141,7 +143,7 @@ function AddressBottomSheet({
                 <Text style={styles.addrLine} numberOfLines={2}>
                   {addr.line1}{addr.city ? `, ${addr.city}` : ""}{addr.state ? `, ${addr.state}` : ""}
                 </Text>
-                <Text style={styles.addrPhone}>Phone number: {addr.receiver_phone || addr.phone || ""}</Text>
+                <Text style={styles.addrPhone}>Phone: {userPhone || ""}</Text>
               </View>
 
               <View
@@ -312,8 +314,11 @@ export default function CartScreen() {
   const dispatch = useAppDispatch();
   const cartItems = useAppSelector(selectCartProducts);
   const subtotal = useAppSelector(selectSubtotal);
-  const totalWeightG = useAppSelector(selectTotalWeightGrams);
+  const userId = useAppSelector((state) => state.user.userId);
+  const userPhone = useAppSelector((state) => state.user.phone);
   const userAddresses = useAppSelector((state) => state.user.addresses) || [];
+
+  console.log('[CART] userId:', userId);
 
   const isEmpty = cartItems.length === 0;
 
@@ -330,34 +335,40 @@ export default function CartScreen() {
   const [shipping, setShipping] = useState<ShippingState>({ status: 'idle' });
 
   useEffect(() => {
-    console.log('[SHIPPING DEBUG] selectedAddress:', JSON.stringify(selectedAddress));
-    console.log('[SHIPPING DEBUG] cartItems.length:', cartItems.length);
     const pincode = Number(selectedAddress?.pincode);
-    console.log('[SHIPPING DEBUG] parsed pincode:', pincode, 'raw:', selectedAddress?.pincode);
     if (!pincode || cartItems.length === 0) {
-      console.log('[SHIPPING DEBUG] GUARD BLOCKED → idle. pincode:', pincode, 'items:', cartItems.length);
       setShipping({ status: 'idle' });
       return;
     }
-    console.log('[SHIPPING DEBUG] FETCHING shipping rate... weight:', totalWeightG, 'pincode:', pincode);
+
     let cancelled = false;
     setShipping({ status: 'loading' });
-    calculateShippingRate(totalWeightG, pincode)
+
+    // Fetch cart from backend to get totalWeight, then call shipping API
+    fetchCart()
+      .then((cartData) => {
+        const totalWeight = cartData.totalWeight || 0;
+        console.log('[SHIPPING] Cart totalWeight from backend:', totalWeight, 'g, pincode:', pincode);
+        if (totalWeight === 0 || cancelled) {
+          if (!cancelled) setShipping({ status: 'idle' });
+          return;
+        }
+        return calculateShippingRate(totalWeight, pincode);
+      })
       .then((res) => {
-        console.log('[SHIPPING DEBUG] API RESPONSE:', JSON.stringify(res), 'cancelled:', cancelled);
-        if (!cancelled) setShipping({ status: 'success', data: res });
+        if (res && !cancelled) {
+          console.log('[SHIPPING] Rate:', JSON.stringify(res));
+          setShipping({ status: 'success', data: res });
+        }
       })
       .catch((err: any) => {
-        console.log('[SHIPPING DEBUG] API ERROR:', err?.message, 'cancelled:', cancelled);
+        console.log('[SHIPPING] Error:', err?.message);
         if (!cancelled)
           setShipping({ status: 'error', message: err?.message ?? 'Could not fetch rate' });
       });
-    return () => {
-      console.log('[SHIPPING DEBUG] CLEANUP → cancelled = true');
-      cancelled = true;
-    };
-    // Use a stable string key (not the object ref) to avoid infinite re-runs
-  }, [cartItems.length, selectedAddress?.pincode, selectedAddress?._id]);
+
+    return () => { cancelled = true; };
+  }, [cartItems.length, subtotal, selectedAddress?.pincode, selectedAddress?._id]);
 
   const shippingCharge =
     shipping.status === 'success' ? shipping.data.shippingCharge : 0;
@@ -626,6 +637,9 @@ export default function CartScreen() {
                     .filter(Boolean)
                     .join(", ")}
                 </Text>
+                {userPhone ? (
+                  <Text style={styles.addressPhone}>📞 {userPhone}</Text>
+                ) : null}
               </View>
             )}
 
@@ -655,10 +669,11 @@ export default function CartScreen() {
             visible={sheetVisible}
             addresses={addresses}
             selectedIdx={selectedAddressIdx}
-            onSelect={(idx) => setSelectedAddressIdx(idx)}
+            onSelect={(idx) => { setSelectedAddressIdx(idx); setSheetVisible(false); }}
             onClose={() => setSheetVisible(false)}
             onPlaceOrder={handlePlaceOrder}
             isProcessing={isProcessing}
+            userPhone={userPhone}
           />
         </>
       )}
@@ -779,6 +794,7 @@ const styles = StyleSheet.create({
   addressRow: { flexDirection: "row", alignItems: "center" },
   addressLabel: { marginLeft: 5, fontWeight: "600" },
   addressText: { fontSize: 12, color: "#666", marginTop: 6 },
+  addressPhone: { fontSize: 12, color: "#333", marginTop: 4, fontWeight: "500", letterSpacing: 0.3 },
 
   changeBtn: {
     borderWidth: 1,

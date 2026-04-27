@@ -3,9 +3,9 @@
 
 import { apiRequest } from "../../../shared/services/api.client";
 import {
+  getAccessToken,
   getGuestSessionId,
   setGuestSessionId,
-  getAccessToken,
 } from "../../../shared/services/token.service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -24,6 +24,7 @@ export interface CartResponse {
   _id?: string;
   items: CartItemResponse[];
   total_amount?: number;
+  totalWeight?: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
