@@ -22,7 +22,11 @@ const { width } = Dimensions.get("window");
 
 const getImageUrl = (product: any): string => {
   if (product.image_url) return product.image_url;
-  if (product.image) return product.image;
+  // image can be a string URL or an object { image_url, image_key, ... }
+  if (product.image) {
+    if (typeof product.image === 'string') return product.image;
+    if (product.image.image_url) return product.image.image_url;
+  }
   if (product.image_document_id && product.image_name) {
     return `https://cdn2.zohoecommerce.com/product-images/${product.image_name}/${product.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`;
   }

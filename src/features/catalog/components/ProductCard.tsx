@@ -26,7 +26,7 @@ export default function ProductCard({ product, variant = "horizontal", qty, isWi
       style={[styles.card, isGrid ? styles.cardGrid : styles.cardHorizontal]}
     >
       <View style={styles.imgWrap}>
-        <Image source={{ uri: product.image }} style={styles.img} resizeMode="cover" />
+        <Image source={{ uri: typeof product.image === 'string' ? product.image : product.image?.image_url ?? '' }} style={styles.img} resizeMode="cover" />
         {tagColors && product.tag && (
           <View style={[styles.tag, { backgroundColor: tagColors.bg }]}>
             <Text style={[styles.tagText, { color: tagColors.text }]}>{product.tag}</Text>

@@ -12,7 +12,12 @@ export const AppConfig = {
   CDN_BASE_URL: "https://cdn2.zohoecommerce.com",
   STOREFRONT_DOMAIN: "products.tcbtjaivikkisan.com",
 
-  
+  /** Zoho Payments SDK — get from Zoho Payments → Developer Space → API Keys */
+  ZOHO_PAYMENTS_API_KEY: "1003.b8a2f5fbd970f7d66db318f78c8ba045.01aff74b3639b972c10c07a7dc1d2c18",
+  ZOHO_PAYMENTS_ACCOUNT_ID: "60046963789",
+  ZOHO_PAYMENTS_REGION: "india" as "india" | "us",
+  ZOHO_PAYMENTS_MODE: "live" as "sandbox" | "live",  // must match backend mode
+
 
   /** Feature flags */
   FEATURES: {

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   ScrollView,
-  Text,
+  Image,
   StyleSheet,
   Dimensions,
 } from "react-native";
@@ -12,11 +12,14 @@ const { width } = Dimensions.get("window");
 // FULL WIDTH (important)
 const BANNER_WIDTH = width;
 
-// mock data
-const bannerData = [1, 2, 3, 4];
+// Banner images from assets
+const bannerImages = [
+  require("../../../assets/images/banner1.jpeg"),
+  require("../../../assets/images/banner2.jpeg"),
+];
 
 // duplicate for infinite loop illusion
-const loopData = [...bannerData, ...bannerData];
+const loopData = [...bannerImages, ...bannerImages];
 
 export default function BannerCarousel() {
   const scrollRef = useRef<ScrollView>(null);
@@ -33,14 +36,14 @@ export default function BannerCarousel() {
       });
 
       setIndex(nextIndex);
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [index]);
 
   // LOOP RESET (smooth)
   useEffect(() => {
-    if (index >= bannerData.length) {
+    if (index >= bannerImages.length) {
       setTimeout(() => {
         scrollRef.current?.scrollTo({
           x: 0,
@@ -65,12 +68,14 @@ export default function BannerCarousel() {
           setIndex(i);
         }}
       >
-        {loopData.map((item, i) => (
+        {loopData.map((imgSource, i) => (
           <View key={i} style={{ width: BANNER_WIDTH }}>
             <View style={styles.bannerCard}>
-              <Text style={{ color: "#888" }}>
-                Banner {i % bannerData.length + 1}
-              </Text>
+              <Image
+                source={imgSource}
+                style={styles.bannerImage}
+                resizeMode="cover"
+              />
             </View>
           </View>
         ))}
@@ -78,8 +83,8 @@ export default function BannerCarousel() {
 
       {/* DOTS */}
       <View style={styles.dots}>
-        {bannerData.map((_, i) => {
-          const active = i === index % bannerData.length;
+        {bannerImages.map((_, i) => {
+          const active = i === index % bannerImages.length;
 
           return (
             <View
@@ -95,12 +100,17 @@ export default function BannerCarousel() {
 
 const styles = StyleSheet.create({
   bannerCard: {
-    height: width * 0.5,
-    marginHorizontal: 16, // spacing like Blinkit
+    height: width * 0.45,
+    marginHorizontal: 16,
     borderRadius: 14,
+    overflow: "hidden",
     backgroundColor: "#EAEAEA",
-    alignItems: "center",
-    justifyContent: "center",
+  },
+
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 14,
   },
 
   dots: {

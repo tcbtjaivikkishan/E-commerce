@@ -62,7 +62,11 @@ export default function HomeScreen() {
   // Helper to get image URL
   const getImage = useCallback((p: any) => {
     if (p.image_url) return p.image_url;
-    if (p.image) return p.image;
+    // image can be a string URL or an object { image_url, image_key, ... }
+    if (p.image) {
+      if (typeof p.image === 'string') return p.image;
+      if (p.image.image_url) return p.image.image_url;
+    }
     if (p.image_name && p.image_document_id) {
       return `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`;
     }
