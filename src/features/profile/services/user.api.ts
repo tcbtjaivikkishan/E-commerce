@@ -45,7 +45,7 @@ export async function deleteUserAddress(
   addressId: string
 ): Promise<BackendUser> {
   return apiRequest<BackendUser>(`/users/${userId}/address/${addressId}`, {
-    method: "POST",
+    method: "DELETE",
   });
 }
 

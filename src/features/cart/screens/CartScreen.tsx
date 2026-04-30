@@ -17,13 +17,15 @@ import { SvgXml } from "react-native-svg";
 
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
 import { useOrder } from "../../checkout/hooks/useOrder";
-import {
-  calculateShippingRate,
-  type ShippingRateResponse,
-} from "../../checkout/services/shipping.api";
 import { openCheckout } from "../../checkout/services/zoho-payments";
 import { setTempAddress, setTempAddressId } from "../../checkout/store/orderSlice";
-import { fetchCart } from "../services/cart.api";
+import {
+  calcShippingInBackground,
+  selectShippingStatus,
+  selectShippingData,
+  selectShippingError,
+  selectShippingCharge,
+} from "../../checkout/store/shippingSlice";
 import {
   addItem,
   removeItem,
@@ -302,13 +304,6 @@ const CartItem = React.memo(function CartItem({ item }: any) {
   );
 });
 
-// ─── Shipping state shape ────────────────────────────────────────────────────
-type ShippingState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'success'; data: ShippingRateResponse }
-  | { status: 'error'; message: string };
-
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export default function CartScreen() {
   const dispatch = useAppDispatch();
@@ -317,8 +312,6 @@ export default function CartScreen() {
   const userId = useAppSelector((state) => state.user.userId);
   const userPhone = useAppSelector((state) => state.user.phone);
   const userAddresses = useAppSelector((state) => state.user.addresses) || [];
-
-
 
   const isEmpty = cartItems.length === 0;
 
@@ -331,57 +324,30 @@ export default function CartScreen() {
   const addresses = userAddresses;
   const selectedAddress = addresses[selectedAddressIdx] ?? addresses[0] ?? null;
 
-  // ── Live shipping rate ────────────────────────────────────────────────────
-  const [shipping, setShipping] = useState<ShippingState>({ status: 'idle' });
+  // ── Shipping from Redux (pre-calculated in background) ─────────────────────
+  const shippingStatus = useAppSelector(selectShippingStatus);
+  const shippingData = useAppSelector(selectShippingData);
+  const shippingError = useAppSelector(selectShippingError);
+  const shippingCharge = useAppSelector(selectShippingCharge);
 
-  // Total quantity across all items — changes on every +/- tap
-  const totalQty = cartItems.reduce((sum: number, i: any) => sum + (i.qty || 0), 0);
+  // Map to the shape used by the UI
+  const shipping = shippingStatus === 'success' && shippingData
+    ? { status: 'success' as const, data: shippingData }
+    : shippingStatus === 'loading'
+    ? { status: 'loading' as const }
+    : shippingStatus === 'error'
+    ? { status: 'error' as const, message: shippingError || 'Could not fetch rate' }
+    : { status: 'idle' as const };
 
-  // Debounced shipping rate fetch — avoids rapid re-calls on every +/- tap
+  // Re-trigger shipping calc when address changes (pincode change)
   useEffect(() => {
     const pincode = Number(selectedAddress?.pincode);
-    if (!pincode || cartItems.length === 0) {
-      setShipping({ status: 'idle' });
-      return;
-    }
+    if (!pincode || cartItems.length === 0) return;
 
-    let cancelled = false;
-    setShipping({ status: 'loading' });
+    // Only recalculate if the pincode differs from what's already cached
+    dispatch(calcShippingInBackground({ pincode }));
+  }, [selectedAddress?.pincode, selectedAddress?._id]);
 
-    // 800ms debounce — wait for user to finish tapping +/- before calling API
-    const debounceTimer = setTimeout(() => {
-      // Fetch cart from backend to get totalWeight, then call shipping API
-      fetchCart()
-        .then((cartData) => {
-          const totalWeight = cartData.totalWeight || 0;
-          console.log('[SHIPPING] Cart totalWeight from backend:', totalWeight, 'g, pincode:', pincode);
-          if (totalWeight === 0 || cancelled) {
-            if (!cancelled) setShipping({ status: 'idle' });
-            return;
-          }
-          return calculateShippingRate(totalWeight, pincode);
-        })
-        .then((res) => {
-          if (res && !cancelled) {
-            console.log('[SHIPPING] Rate:', JSON.stringify(res));
-            setShipping({ status: 'success', data: res });
-          }
-        })
-        .catch((err: any) => {
-          console.log('[SHIPPING] Error:', err?.message);
-          if (!cancelled)
-            setShipping({ status: 'error', message: err?.message ?? 'Could not fetch rate' });
-        });
-    }, 800);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(debounceTimer);
-    };
-  }, [totalQty, cartItems.length, selectedAddress?.pincode, selectedAddress?._id]);
-
-  const shippingCharge =
-    shipping.status === 'success' ? shipping.data.shippingCharge : 0;
   const grandTotal = subtotal + shippingCharge;
 
   // ── Sync selected address into orderSlice whenever it changes ──────────────

@@ -81,10 +81,9 @@ function SearchablePicker({ value, onChange, options, placeholder, disabled = fa
   const [query, setQuery] = useState(value);
   const inputRef = useRef<TextInput>(null);
 
-  // Sync query when value changes externally (e.g. modal reopens with new address)
+  // Sync query when value changes externally — don't force close the dropdown
   React.useEffect(() => {
-    setQuery(value);
-    setOpen(false);
+    if (!open) setQuery(value);
   }, [value]);
 
   const filtered = options.filter((s) => s.toLowerCase().includes(query.toLowerCase()));
@@ -275,8 +274,12 @@ function EditAddressModal({ visible, address, onClose, onSave }: EditModalProps)
           <Text style={modal.sectionLabel}>📍 Address Details</Text>
           <TextInput style={modal.input} placeholder="Address line 1*" placeholderTextColor="#999" value={line1} onChangeText={setLine1} />
           <TextInput style={modal.input} placeholder="Address line 2 (optional)" placeholderTextColor="#999" value={line2} onChangeText={setLine2} />
-          <SearchablePicker value={state} onChange={handleStateChange} options={INDIAN_STATES} placeholder="State*" />
-          <SearchablePicker value={city} onChange={setCity} options={cityOptions} placeholder="City*" />
+          <View style={{ zIndex: 2 }}>
+            <SearchablePicker value={state} onChange={handleStateChange} options={INDIAN_STATES} placeholder="State*" />
+          </View>
+          <View style={{ zIndex: 1 }}>
+            <SearchablePicker value={city} onChange={setCity} options={cityOptions} placeholder="City*" />
+          </View>
           <TextInput style={modal.input} placeholder="Pin code*" placeholderTextColor="#999" value={pincode} onChangeText={setPincode} keyboardType="number-pad" maxLength={6} />
 
           {/* Contact section */}

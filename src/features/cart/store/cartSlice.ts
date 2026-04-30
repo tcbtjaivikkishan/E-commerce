@@ -11,6 +11,7 @@ import {
   updateCartItem,
   type CartResponse
 } from "../services/cart.api";
+import { dispatchShippingCalc } from "../../checkout/store/shippingSlice";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -47,9 +48,16 @@ const initialState: CartState = {
 /** Fetch the full cart from the server */
 export const syncCart = createAsyncThunk(
   "cart/syncCart",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch, getState }) => {
     try {
-      return await fetchCart();
+      const cart = await fetchCart();
+
+      // If cart has items, pre-fetch shipping rate in background
+      if (cart.items?.length > 0 && cart.totalWeight) {
+        dispatchShippingCalc(dispatch, getState as () => any, cart.totalWeight);
+      }
+
+      return cart;
     } catch (err: any) {
       return rejectWithValue(err.message || "Failed to load cart");
     }
@@ -61,12 +69,17 @@ export const updateItemAsync = createAsyncThunk(
   "cart/updateItem",
   async (
     { productId, quantity }: { productId: string; quantity: number },
-    { rejectWithValue }
+    { rejectWithValue, dispatch, getState }
   ) => {
     try {
       console.log(`[CART SYNC] PATCH item: ${productId}, qty: ${quantity}`);
       const result = await updateCartItem(productId, quantity);
       console.log('[CART SYNC] PATCH result:', JSON.stringify(result).substring(0, 300));
+
+      // Trigger background shipping rate calculation — pass weight from
+      // the PATCH response so we skip the redundant fetchCart() call
+      dispatchShippingCalc(dispatch, getState as () => any, result.totalWeight);
+
       return result;
     } catch (err: any) {
       console.error('[CART SYNC] PATCH failed:', err.message);

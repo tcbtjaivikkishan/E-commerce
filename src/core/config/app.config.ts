@@ -8,7 +8,7 @@ export const AppConfig = {
   APP_SLUG: "client",
 
   /** API configuration — swap per environment */
-  API_BASE_URL: "https://squatting-wound-diaphragm.ngrok-free.dev",
+  API_BASE_URL: "https://iatrogenic-claribel-unwillfully.ngrok-free.dev",
   CDN_BASE_URL: "https://cdn2.zohoecommerce.com",
   STOREFRONT_DOMAIN: "products.tcbtjaivikkisan.com",
 
