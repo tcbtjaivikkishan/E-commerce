@@ -50,16 +50,15 @@ export async function deleteUserAddress(
 }
 
 /**
- * PATCH /users/:id/address — update an address by index [JWT]
- * Backend only accepts PATCH; we send { action: "update", index, ...address }
+ * PATCH /users/:id/address/:addressId — update a specific address [JWT]
  */
 export async function updateUserAddress(
   userId: string,
-  index: number,
+  addressId: string,
   address: Partial<UserAddress>
-): Promise<BackendUser> {
-  return apiRequest<BackendUser>(`/users/${userId}/address`, {
+): Promise<UserAddress> {
+  return apiRequest<UserAddress>(`/users/${userId}/address/${addressId}`, {
     method: "PATCH",
-    body: { action: "update", index, ...address },
+    body: address,
   });
 }

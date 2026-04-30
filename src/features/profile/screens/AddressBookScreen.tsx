@@ -81,7 +81,11 @@ function SearchablePicker({ value, onChange, options, placeholder, disabled = fa
   const [query, setQuery] = useState(value);
   const inputRef = useRef<TextInput>(null);
 
-  React.useEffect(() => { setQuery(value); }, [value]);
+  // Sync query when value changes externally (e.g. modal reopens with new address)
+  React.useEffect(() => {
+    setQuery(value);
+    setOpen(false);
+  }, [value]);
 
   const filtered = options.filter((s) => s.toLowerCase().includes(query.toLowerCase()));
 
@@ -121,16 +125,23 @@ function SearchablePicker({ value, onChange, options, placeholder, disabled = fa
 
       {open && (
         <View style={pk.listContainer}>
-          {filtered.length === 0 ? (
-            <View style={pk.emptyRow}><Text style={pk.emptyText}>No results found</Text></View>
-          ) : (
-            filtered.map((item) => (
-              <TouchableOpacity key={item} style={[pk.item, item === value && pk.itemSelected]} onPress={() => select(item)} activeOpacity={0.7}>
-                <Text style={[pk.itemText, item === value && pk.itemTextSelected]}>{item}</Text>
-                {item === value && <Text style={pk.checkmark}>✓</Text>}
-              </TouchableOpacity>
-            ))
-          )}
+          <ScrollView
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+            style={{ maxHeight: 180 }}
+          >
+            {filtered.length === 0 ? (
+              <View style={pk.emptyRow}><Text style={pk.emptyText}>No results found</Text></View>
+            ) : (
+              filtered.map((item) => (
+                <TouchableOpacity key={item} style={[pk.item, item === value && pk.itemSelected]} onPress={() => select(item)} activeOpacity={0.7}>
+                  <Text style={[pk.itemText, item === value && pk.itemTextSelected]}>{item}</Text>
+                  {item === value && <Text style={pk.checkmark}>✓</Text>}
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -243,54 +254,45 @@ function EditAddressModal({ visible, address, onClose, onSave }: EditModalProps)
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={modal.overlay}>
-        <KeyboardAvoidingView
-          style={modal.sheetWrapper}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+        {/* Header */}
+        <View style={modal.header}>
+          <Text style={modal.title}>Edit Address</Text>
+          <TouchableOpacity onPress={onClose} style={modal.closeBtn}>
+            <Text style={modal.closeIcon}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={modal.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
         >
-          <View style={modal.sheet}>
-            {/* Handle */}
-            <View style={modal.handle} />
+          {/* Address section */}
+          <Text style={modal.sectionLabel}>📍 Address Details</Text>
+          <TextInput style={modal.input} placeholder="Address line 1*" placeholderTextColor="#999" value={line1} onChangeText={setLine1} />
+          <TextInput style={modal.input} placeholder="Address line 2 (optional)" placeholderTextColor="#999" value={line2} onChangeText={setLine2} />
+          <SearchablePicker value={state} onChange={handleStateChange} options={INDIAN_STATES} placeholder="State*" />
+          <SearchablePicker value={city} onChange={setCity} options={cityOptions} placeholder="City*" />
+          <TextInput style={modal.input} placeholder="Pin code*" placeholderTextColor="#999" value={pincode} onChangeText={setPincode} keyboardType="number-pad" maxLength={6} />
 
-            {/* Header */}
-            <View style={modal.header}>
-              <Text style={modal.title}>Edit Address</Text>
-              <TouchableOpacity onPress={onClose} style={modal.closeBtn}>
-                <Text style={modal.closeIcon}>✕</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Contact section */}
+          <Text style={modal.sectionLabel}>📞 Contact Details</Text>
+          <TextInput style={modal.input} placeholder="Receiver's name*" placeholderTextColor="#999" value={receiverName} onChangeText={setReceiverName} />
+          <TextInput style={modal.input} placeholder="Receiver's phone*" placeholderTextColor="#999" value={receiverPhone} onChangeText={setReceiverPhone} keyboardType="phone-pad" maxLength={10} />
+          <TextInput style={modal.input} placeholder="Label (e.g. Home, Work)" placeholderTextColor="#999" value={label} onChangeText={setLabel} />
+        </ScrollView>
 
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={modal.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {/* Address section */}
-              <Text style={modal.sectionLabel}>📍 Address Details</Text>
-              <TextInput style={modal.input} placeholder="Address line 1*" placeholderTextColor="#999" value={line1} onChangeText={setLine1} />
-              <TextInput style={modal.input} placeholder="Address line 2 (optional)" placeholderTextColor="#999" value={line2} onChangeText={setLine2} />
-              <SearchablePicker value={state} onChange={handleStateChange} options={INDIAN_STATES} placeholder="State*" />
-              <SearchablePicker value={city} onChange={setCity} options={cityOptions} placeholder="City*" />
-              <TextInput style={modal.input} placeholder="Pin code*" placeholderTextColor="#999" value={pincode} onChangeText={setPincode} keyboardType="number-pad" maxLength={6} />
-
-              {/* Contact section */}
-              <Text style={modal.sectionLabel}>📞 Contact Details</Text>
-              <TextInput style={modal.input} placeholder="Receiver's name*" placeholderTextColor="#999" value={receiverName} onChangeText={setReceiverName} />
-              <TextInput style={modal.input} placeholder="Receiver's phone*" placeholderTextColor="#999" value={receiverPhone} onChangeText={setReceiverPhone} keyboardType="phone-pad" maxLength={10} />
-              <TextInput style={modal.input} placeholder="Label (e.g. Home, Work)" placeholderTextColor="#999" value={label} onChangeText={setLabel} />
-            </ScrollView>
-
-            {/* Save button */}
-            <View style={modal.footer}>
-              <TouchableOpacity style={modal.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-                <Text style={modal.saveBtnText}>Save Changes</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+        {/* Save button */}
+        <View style={modal.footer}>
+          <TouchableOpacity style={modal.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+            <Text style={modal.saveBtnText}>Save Changes</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -335,8 +337,9 @@ export default function AddressBookScreen() {
 
   const handleSaveEdit = async (updated: UserAddress) => {
     if (editIndex === null) return;
+    const addr = addresses[editIndex];
     try {
-      if (userId) await updateUserAddress(userId, editIndex, updated);
+      if (userId && addr?._id) await updateUserAddress(userId, addr._id, updated);
     } catch (_) {
       // silent
     } finally {
@@ -507,7 +510,7 @@ const modal = StyleSheet.create({
     flex: 1, backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
   },
-  sheetWrapper: { justifyContent: "flex-end" },
+  sheetWrapper: { flex: 1, justifyContent: "flex-end" },
   sheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -571,7 +574,7 @@ const pk = StyleSheet.create({
   listContainer: {
     borderWidth: 1, borderTopWidth: 0, borderColor: GREEN,
     borderBottomLeftRadius: 10, borderBottomRightRadius: 10,
-    backgroundColor: "#fff", maxHeight: 180, overflow: "hidden",
+    backgroundColor: "#fff",
     shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08, shadowRadius: 6, elevation: 4,
   },
