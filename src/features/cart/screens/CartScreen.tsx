@@ -348,7 +348,7 @@ export default function CartScreen() {
     dispatch(calcShippingInBackground({ pincode }));
   }, [selectedAddress?.pincode, selectedAddress?._id]);
 
-  const grandTotal = subtotal + shippingCharge;
+  const grandTotal = subtotal + Math.round(shippingCharge);
 
   // ── Sync selected address into orderSlice whenever it changes ──────────────
   useEffect(() => {
@@ -529,7 +529,7 @@ export default function CartScreen() {
                   <ActivityIndicator size="small" color="#196F1B" />
                 ) : shipping.status === 'success' ? (
                   <Text style={[styles.billValue, shippingCharge === 0 && styles.billValueFree]}>
-                    {shippingCharge === 0 ? 'FREE' : `₹${shippingCharge}`}
+                    {shippingCharge === 0 ? 'FREE' : `₹${Math.round(shippingCharge)}`}
                   </Text>
                 ) : shipping.status === 'error' ? (
                   <Text style={styles.billValueError}>–</Text>
