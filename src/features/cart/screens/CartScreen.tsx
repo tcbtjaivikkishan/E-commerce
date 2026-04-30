@@ -555,7 +555,7 @@ export default function CartScreen() {
               <Text style={styles.sectionTitle}>Cancellation Policy</Text>
               <View style={styles.divider} />
               <Text style={styles.policyText}>
-                Once order is placed, any cancellation may result in a fee. In case of unexpected delays leading to order cancellation, a complete refund will be provided. Once order is placed, any cancellation may result in a fee. In case of unexpected delays leading to order cancellation, a complete refund will be provided.
+                Once order is placed, any cancellation may result in a fee. In case of unexpected delays leading to order cancellation, a complete help will be provided.
               </Text>
             </View>
           </ScrollView>

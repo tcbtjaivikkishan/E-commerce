@@ -1,13 +1,14 @@
 import { loginSuccess } from "@/src/features/auth/store/userSlice";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   Dimensions,
   Image,
   Keyboard,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 import { sendOtp, verifyOtp } from "../services/auth.service";
+import { useOtpAutoRead } from "../hooks/useOtpAutoRead";
 
 const { width } = Dimensions.get("window");
 
@@ -114,16 +116,89 @@ if (typeof document !== "undefined") {
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
+const RESEND_COOLDOWN_SEC = 30;
+
 export default function LoginScreen() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoDetecting, setAutoDetecting] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const dispatch = useDispatch();
   const params = useLocalSearchParams<{ redirect?: string }>();
+  const verifyingRef = useRef(false);
+  const otpInputRef = useRef<TextInput>(null);
 
   const ROW_H = CARD_H + CARD_GAP;
+
+  // ── Auto-verify helper (shared by manual + auto-read) ────────────────────
+  const doVerify = useCallback(
+    async (code: string) => {
+      if (verifyingRef.current || code.length < 6) return;
+      verifyingRef.current = true;
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await verifyOtp(phone, code);
+        const { user, access_token, session_id } = response;
+
+        dispatch(
+          loginSuccess({
+            phone: user.mobile_number,
+            isLoggedIn: true,
+            token: access_token,
+            name: user.name,
+            email: user.email,
+            userId: user._id,
+            sessionId: session_id,
+            addresses: user.addresses,
+          })
+        );
+
+        const redirect = (params.redirect as string) || "/home";
+        router.replace(redirect as any);
+      } catch (err: any) {
+        const msg = err?.message || "Invalid OTP";
+        Alert.alert("Verification Failed", msg);
+        setError(msg);
+      } finally {
+        setLoading(false);
+        verifyingRef.current = false;
+      }
+    },
+    [phone, dispatch, params.redirect]
+  );
+
+  // ── Auto-OTP detection (Android SMS Retriever / iOS oneTimeCode) ─────────
+  useOtpAutoRead({
+    enabled: step === "otp",
+    onOtpReceived: (code) => {
+      setOtp(code);
+      setAutoDetecting(false);
+      // Auto-submit the detected OTP
+      doVerify(code);
+    },
+  });
+
+  // ── Resend countdown timer ───────────────────────────────────────────────
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const id = setInterval(() => {
+      setResendTimer((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resendTimer]);
+
+  // Show auto-detecting state when OTP step starts (Android only)
+  useEffect(() => {
+    if (step === "otp" && Platform.OS === "android") {
+      setAutoDetecting(true);
+    } else {
+      setAutoDetecting(false);
+    }
+  }, [step]);
 
   // ── Blinkit-style keyboard animation ─────────────────────────────────────
   const sheetTranslateY = useRef(new Animated.Value(0)).current;
@@ -178,6 +253,7 @@ export default function LoginScreen() {
       await sendOtp(phone);
       Alert.alert("OTP Sent", "Please check your phone for the OTP");
       setStep("otp");
+      setResendTimer(RESEND_COOLDOWN_SEC);
     } catch (err: any) {
       const msg = err?.message || "Failed to send OTP";
       if (msg.toLowerCase().includes("rate") || msg.toLowerCase().includes("limit")) {
@@ -191,39 +267,29 @@ export default function LoginScreen() {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await sendOtp(phone);
+      setResendTimer(RESEND_COOLDOWN_SEC);
+      setOtp("");
+      if (Platform.OS === "android") setAutoDetecting(true);
+    } catch (err: any) {
+      const msg = err?.message || "Failed to resend OTP";
+      Alert.alert("Error", msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleVerifyOTP = async () => {
     if (otp.length < 6) {
       Alert.alert("Error", "Enter the 6-digit OTP");
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await verifyOtp(phone, otp);
-      const { user, access_token, session_id } = response;
-
-      dispatch(
-        loginSuccess({
-          phone: user.mobile_number,
-          isLoggedIn: true,
-          token: access_token,
-          name: user.name,
-          email: user.email,
-          userId: user._id,
-          sessionId: session_id,
-          addresses: user.addresses,
-        })
-      );
-
-      const redirect = (params.redirect as string) || "/home";
-      router.replace(redirect as any);
-    } catch (err: any) {
-      const msg = err?.message || "Invalid OTP";
-      Alert.alert("Verification Failed", msg);
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
+    doVerify(otp);
   };
 
   return (
@@ -307,16 +373,37 @@ export default function LoginScreen() {
         ) : (
           <>
             <Text style={styles.otpHint}>Enter OTP sent to +91 {phone}</Text>
+
+            {/* Auto-detecting indicator (Android only) */}
+            {autoDetecting && (
+              <View style={styles.autoDetectBanner}>
+                <Text style={styles.autoDetectText}>⏳ Waiting to auto-detect OTP…</Text>
+              </View>
+            )}
+
             <TextInput
+              ref={otpInputRef}
               placeholder="- - - - - -"
               placeholderTextColor="#bbb"
               keyboardType="numeric"
               style={styles.otpInput}
               value={otp}
-              onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, ""))}
+              onChangeText={(text) => {
+                const cleaned = text.replace(/[^0-9]/g, "");
+                setOtp(cleaned);
+                // Auto-submit when 6 digits entered manually
+                if (cleaned.length === 6) {
+                  setAutoDetecting(false);
+                  doVerify(cleaned);
+                }
+              }}
               maxLength={6}
-              autoComplete="off"
+              // iOS: enables "From Messages" auto-fill suggestion in keyboard bar
+              textContentType="oneTimeCode"
+              // Android: enables native SMS OTP auto-fill
+              autoComplete={Platform.OS === "android" ? "sms-otp" : "one-time-code"}
               autoCorrect={false}
+              autoFocus
             />
 
             <TouchableOpacity
@@ -330,9 +417,27 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => { setStep("phone"); setOtp(""); setError(null); }}>
-              <Text style={styles.changeNumber}>Change Number</Text>
-            </TouchableOpacity>
+            {/* Resend + Change Number row */}
+            <View style={styles.otpActionsRow}>
+              <TouchableOpacity
+                onPress={handleResendOtp}
+                disabled={resendTimer > 0}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.resendText,
+                  resendTimer > 0 && styles.resendTextDisabled,
+                ]}>
+                  {resendTimer > 0
+                    ? `Resend OTP in ${resendTimer}s`
+                    : "Resend OTP"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => { setStep("phone"); setOtp(""); setError(null); setAutoDetecting(false); }}>
+                <Text style={styles.changeNumber}>Change Number</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </Animated.View>
@@ -444,9 +549,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   changeNumber: {
-    textAlign: "center",
     color: "#196F1B",
-    marginTop: 12,
     fontSize: 14,
     fontWeight: "500",
   },
@@ -467,5 +570,33 @@ const styles = StyleSheet.create({
   termsLink: {
     color: "#196F1B",
     fontWeight: "600",
+  },
+  autoDetectBanner: {
+    backgroundColor: "#E8F5E9",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  autoDetectText: {
+    color: "#2E7D32",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  otpActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 14,
+    paddingHorizontal: 4,
+  },
+  resendText: {
+    color: "#196F1B",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  resendTextDisabled: {
+    color: "#999",
   },
 });
