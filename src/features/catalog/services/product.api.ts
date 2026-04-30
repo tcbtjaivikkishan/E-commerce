@@ -15,9 +15,10 @@ export interface ApiProductResponse {
   category_name?: string;
   price: number;
   stock: number;
-  image_url?: string;
+  image: {
+    image_url?: string;
+  };
   is_active: boolean;
-  show_in_storefront: boolean;
   weight?: number;
   length?: number;
   width?: number;

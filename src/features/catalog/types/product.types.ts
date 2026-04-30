@@ -27,7 +27,6 @@ export type ApiProduct = {
     name: string;
   };
   status: "active" | "inactive";
-  show_in_storefront: boolean;
   createdAt: string;
   updatedAt: string;
 };

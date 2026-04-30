@@ -14,7 +14,8 @@ import {
 
 import Header from "../../../shared/components/Header";
 import { fetchAllCategories } from "../services/category.api";
-import { fetchAllProducts } from "../services/product.api";
+import { fetchAllProducts, ApiProductResponse } from "../services/product.api";
+import { Category as ApiCategory } from "../types/category.types";
 
 // ─── Types ─────────────────────────────────────────
 
@@ -35,22 +36,17 @@ interface Category {
 const { width } = Dimensions.get("window");
 const CARD_SIZE = (width - 48) / 4;
 
-// ─── Helpers ───────────────────────────────────────
-
-const getImageUrl = (p: any): string | null => {
-  if (p.image_url) return p.image_url;
-  if (p.image) return p.image;
-  if (p.image_document_id && p.image_name) {
-    return `https://cdn2.zohoecommerce.com/product-images/${p.image_name}/${p.image_document_id}/800x800?storefront_domain=products.tcbtjaivikkisan.com`;
-  }
+// ✅ FIXED IMAGE LOGIC
+const getImageUrl = (p: ApiProductResponse): string | null => {
+  if (p.image?.image_url) return p.image.image_url;
   return null;
 };
 
-// ─── Product Card (memoized) ──────────────────────────────────
-const ProductCard = React.memo<{
+// ─── Product Card ──────────────────────────────────
+const ProductCard: React.FC<{
   item: CategoryItem;
   onPress: (item: CategoryItem) => void;
-}>(({ item, onPress }) => (
+}> = ({ item, onPress }) => (
   <TouchableOpacity
     style={styles.card}
     onPress={() => onPress(item)}
@@ -71,22 +67,24 @@ const ProductCard = React.memo<{
       {item.name}
     </Text>
   </TouchableOpacity>
-));
+);
 
-// ─── Category Section (memoized) ────────────────────────
-const CategorySection = React.memo<{
+// ─── Category Section ──────────────────────────────
+const CategorySection: React.FC<{
   category: Category;
   onProductPress: (item: CategoryItem) => void;
-}>(({ category, onProductPress }) => (
+}> = ({ category, onProductPress }) => (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{category.title}</Text>
 
-      {/* ✅ Show only if more items exist */}
       {category.totalItems > 8 && (
         <TouchableOpacity
           onPress={() =>
-            router.push(`/category/${category.id}` as any)
+            router.push({
+              pathname: `/categories/${category.id}`,
+              params: { categoryName: category.title },
+            })
           }
         >
           <Text style={styles.seeAll}>See All</Text>
@@ -104,7 +102,7 @@ const CategorySection = React.memo<{
       ))}
     </View>
   </View>
-));
+);
 
 // ─── Main Screen ───────────────────────────────────
 export default function CategoryScreen(): React.JSX.Element {
@@ -118,19 +116,13 @@ export default function CategoryScreen(): React.JSX.Element {
       try {
         setLoading(true);
 
-        const [catsRes, productsRes] = await Promise.all([
-          fetchAllCategories(),
-          fetchAllProducts(),
-        ]);
+        // ✅ FIXED (no .data)
+        const cats: ApiCategory[] = await fetchAllCategories();
+        const products: ApiProductResponse[] = await fetchAllProducts();
 
-        const cats = catsRes.data || catsRes;
-        const products = productsRes.data || productsRes;
-
-        // 🔥 Group products by category
         const grouped: Record<string, CategoryItem[]> = {};
 
-        products.forEach((p: any) => {
-          // ✅ Ignore products without category
+        products.forEach((p) => {
           if (!p.category_id) return;
 
           const catId = p.category_id;
@@ -145,25 +137,23 @@ export default function CategoryScreen(): React.JSX.Element {
           });
         });
 
-        // ✅ Filter valid categories
         const validCategories = cats.filter(
-          (c: any) => c.id && c.name
+          (c: ApiCategory) => c.id && c.name
         );
 
-        // 🔥 Map into UI structure
         const finalCategories: Category[] = validCategories
-          .map((c: any) => {
-  const items = grouped[c.id] || []; // ✅ FIX HERE
+          .map((c: ApiCategory) => {
+            const items = grouped[c.id] || [];
 
-  return {
-    id: c.id, // ✅ FIX HERE
-    title: c.name,
-    items: items.slice(0, 8),
-    totalItems: items.length,
-  };
-})
-          .filter((c) => c.totalItems > 0) // remove empty
-          .sort((a, b) => b.totalItems - a.totalItems);
+            return {
+              id: c.id,
+              title: c.name,
+              items: items.slice(0, 8),
+              totalItems: items.length,
+            };
+          })
+          .filter((c: Category) => c.totalItems > 0)
+          .sort((a: Category, b: Category) => b.totalItems - a.totalItems);
 
         if (mounted) setCategories(finalCategories);
       } catch (err) {
@@ -225,7 +215,6 @@ export default function CategoryScreen(): React.JSX.Element {
 // ─── Styles ───────────────────────────────────────
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
-
   scrollView: { flex: 1 },
   scrollContent: { paddingTop: 8, paddingHorizontal: 12 },
 
@@ -274,7 +263,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#333",
     textAlign: "center",
-    lineHeight: 14,
-    paddingHorizontal: 2,
   },
 });
