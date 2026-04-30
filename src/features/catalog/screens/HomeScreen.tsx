@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -215,8 +215,8 @@ export default function HomeScreen() {
   );
 }
 
-// ─── Product Card ─────────────────────────────
-function ProductCard({
+// ─── Product Card (memoized to prevent re-renders on unrelated state changes) ─
+const ProductCard = React.memo(function ProductCard({
   p,
   add,
   remove,
@@ -325,7 +325,8 @@ function ProductCard({
       </View>
     </TouchableOpacity>
   );
-}
+});
+
 
 // ─── Styles ─────────────────────────────
 const styles = StyleSheet.create({

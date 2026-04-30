@@ -38,16 +38,14 @@ export async function addUserAddress(
 }
 
 /**
- * PATCH /users/:id/address — remove an address by index [JWT]
- * Backend only accepts PATCH; we send { action: "remove", index }
+ * DELETE /users/:id/address/:addressId — delete an address [JWT]
  */
 export async function deleteUserAddress(
   userId: string,
-  index: number
+  addressId: string
 ): Promise<BackendUser> {
-  return apiRequest<BackendUser>(`/users/${userId}/address`, {
-    method: "PATCH",
-    body: { action: "remove", index },
+  return apiRequest<BackendUser>(`/users/${userId}/address/${addressId}`, {
+    method: "POST",
   });
 }
 

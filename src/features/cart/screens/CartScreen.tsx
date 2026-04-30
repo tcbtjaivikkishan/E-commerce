@@ -216,8 +216,8 @@ function EmptyCart() {
   );
 }
 
-// ─── CART ITEM ────────────────────────────────────────────────────────────────
-function CartItem({ item }: any) {
+// ─── CART ITEM (memoized) ─────────────────────────────────────────────────────
+const CartItem = React.memo(function CartItem({ item }: any) {
   const dispatch = useAppDispatch();
   // Read live cart quantities so we always compute the correct next qty
   const cartItems = useAppSelector(selectCartItems);
@@ -300,7 +300,7 @@ function CartItem({ item }: any) {
       </View>
     </Animated.View>
   );
-}
+});
 
 // ─── Shipping state shape ────────────────────────────────────────────────────
 type ShippingState =
@@ -318,7 +318,7 @@ export default function CartScreen() {
   const userPhone = useAppSelector((state) => state.user.phone);
   const userAddresses = useAppSelector((state) => state.user.addresses) || [];
 
-  console.log('[CART] userId:', userId);
+
 
   const isEmpty = cartItems.length === 0;
 
@@ -334,6 +334,10 @@ export default function CartScreen() {
   // ── Live shipping rate ────────────────────────────────────────────────────
   const [shipping, setShipping] = useState<ShippingState>({ status: 'idle' });
 
+  // Total quantity across all items — changes on every +/- tap
+  const totalQty = cartItems.reduce((sum: number, i: any) => sum + (i.qty || 0), 0);
+
+  // Debounced shipping rate fetch — avoids rapid re-calls on every +/- tap
   useEffect(() => {
     const pincode = Number(selectedAddress?.pincode);
     if (!pincode || cartItems.length === 0) {
@@ -344,31 +348,37 @@ export default function CartScreen() {
     let cancelled = false;
     setShipping({ status: 'loading' });
 
-    // Fetch cart from backend to get totalWeight, then call shipping API
-    fetchCart()
-      .then((cartData) => {
-        const totalWeight = cartData.totalWeight || 0;
-        console.log('[SHIPPING] Cart totalWeight from backend:', totalWeight, 'g, pincode:', pincode);
-        if (totalWeight === 0 || cancelled) {
-          if (!cancelled) setShipping({ status: 'idle' });
-          return;
-        }
-        return calculateShippingRate(totalWeight, pincode);
-      })
-      .then((res) => {
-        if (res && !cancelled) {
-          console.log('[SHIPPING] Rate:', JSON.stringify(res));
-          setShipping({ status: 'success', data: res });
-        }
-      })
-      .catch((err: any) => {
-        console.log('[SHIPPING] Error:', err?.message);
-        if (!cancelled)
-          setShipping({ status: 'error', message: err?.message ?? 'Could not fetch rate' });
-      });
+    // 800ms debounce — wait for user to finish tapping +/- before calling API
+    const debounceTimer = setTimeout(() => {
+      // Fetch cart from backend to get totalWeight, then call shipping API
+      fetchCart()
+        .then((cartData) => {
+          const totalWeight = cartData.totalWeight || 0;
+          console.log('[SHIPPING] Cart totalWeight from backend:', totalWeight, 'g, pincode:', pincode);
+          if (totalWeight === 0 || cancelled) {
+            if (!cancelled) setShipping({ status: 'idle' });
+            return;
+          }
+          return calculateShippingRate(totalWeight, pincode);
+        })
+        .then((res) => {
+          if (res && !cancelled) {
+            console.log('[SHIPPING] Rate:', JSON.stringify(res));
+            setShipping({ status: 'success', data: res });
+          }
+        })
+        .catch((err: any) => {
+          console.log('[SHIPPING] Error:', err?.message);
+          if (!cancelled)
+            setShipping({ status: 'error', message: err?.message ?? 'Could not fetch rate' });
+        });
+    }, 800);
 
-    return () => { cancelled = true; };
-  }, [cartItems.length, subtotal, selectedAddress?.pincode, selectedAddress?._id]);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceTimer);
+    };
+  }, [totalQty, cartItems.length, selectedAddress?.pincode, selectedAddress?._id]);
 
   const shippingCharge =
     shipping.status === 'success' ? shipping.data.shippingCharge : 0;
@@ -634,13 +644,13 @@ export default function CartScreen() {
               </View>
             )}
 
-            {/* Place Order button */}
+            {/* Place Order button — disabled until shipping rate loads */}
             <TouchableOpacity
               style={[
                 styles.paymentBtn,
-                (addresses.length === 0 || isProcessing) && styles.paymentBtnDisabled,
+                (addresses.length === 0 || isProcessing || shipping.status !== 'success') && styles.paymentBtnDisabled,
               ]}
-              disabled={addresses.length === 0 || isProcessing}
+              disabled={addresses.length === 0 || isProcessing || shipping.status !== 'success'}
               onPress={handlePlaceOrder}
               activeOpacity={0.88}
             >
@@ -649,6 +659,13 @@ export default function CartScreen() {
                   <ActivityIndicator size="small" color="#fff" />
                   <Text style={styles.paymentBtnText}>Processing…</Text>
                 </View>
+              ) : shipping.status === 'loading' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.paymentBtnText}>Calculating delivery…</Text>
+                </View>
+              ) : shipping.status === 'error' ? (
+                <Text style={styles.paymentBtnText}>Delivery unavailable</Text>
               ) : (
                 <Text style={styles.paymentBtnText}>Place Order · ₹{grandTotal}</Text>
               )}

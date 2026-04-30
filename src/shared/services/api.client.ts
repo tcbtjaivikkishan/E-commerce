@@ -86,7 +86,7 @@ export async function apiRequest<T>(
   }
 
   const url = `${BASE_URL}${endpoint}`;
-  console.log(`[API] ${method} ${url}`, body ? JSON.stringify(body) : '');
+  if (__DEV__) console.log(`[API] ${method} ${url}`, body ? JSON.stringify(body) : '');
 
   let response = await fetch(url, {
     method,
@@ -134,10 +134,10 @@ export async function apiRequest<T>(
     data = {};
   }
 
-  console.log(`[API] ${method} ${endpoint} → ${response.status}`, JSON.stringify(data).substring(0, 500));
+  if (__DEV__) console.log(`[API] ${method} ${endpoint} → ${response.status}`, JSON.stringify(data).substring(0, 500));
 
   if (!response.ok) {
-    console.error(`[API] ERROR ${response.status}:`, JSON.stringify(data));
+    if (__DEV__) console.error(`[API] ERROR ${response.status}:`, JSON.stringify(data));
     throw new ApiError(
       response.status,
       data?.message || data?.error || `API Error: ${response.status}`,

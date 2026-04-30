@@ -310,6 +310,7 @@ export default function AddressBookScreen() {
   };
 
   const handleDelete = (index: number) => {
+    const addr = addresses[index];
     Alert.alert(
       "Delete Address",
       "Are you sure you want to remove this address?",
@@ -320,7 +321,7 @@ export default function AddressBookScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              if (userId) await deleteUserAddress(userId, index);
+              if (userId && addr?._id) await deleteUserAddress(userId, addr._id);
             } catch (_) {
               // silent — local state still updates
             } finally {

@@ -46,11 +46,11 @@ const getImageUrl = (p: any): string | null => {
   return null;
 };
 
-// ─── Product Card ──────────────────────────────────
-const ProductCard: React.FC<{
+// ─── Product Card (memoized) ──────────────────────────────────
+const ProductCard = React.memo<{
   item: CategoryItem;
   onPress: (item: CategoryItem) => void;
-}> = ({ item, onPress }) => (
+}>(({ item, onPress }) => (
   <TouchableOpacity
     style={styles.card}
     onPress={() => onPress(item)}
@@ -71,13 +71,13 @@ const ProductCard: React.FC<{
       {item.name}
     </Text>
   </TouchableOpacity>
-);
+));
 
-// ─── Category Section ──────────────────────────────
-const CategorySection: React.FC<{
+// ─── Category Section (memoized) ────────────────────────
+const CategorySection = React.memo<{
   category: Category;
   onProductPress: (item: CategoryItem) => void;
-}> = ({ category, onProductPress }) => (
+}>(({ category, onProductPress }) => (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{category.title}</Text>
@@ -104,7 +104,7 @@ const CategorySection: React.FC<{
       ))}
     </View>
   </View>
-);
+));
 
 // ─── Main Screen ───────────────────────────────────
 export default function CategoryScreen(): React.JSX.Element {
@@ -125,10 +125,7 @@ export default function CategoryScreen(): React.JSX.Element {
 
         const cats = catsRes.data || catsRes;
         const products = productsRes.data || productsRes;
-        console.log("CATS:", cats);
-        console.log("PRODUCTS:", products);
-        console.log("PRODUCTS SAMPLE:", products[0]);
-        console.log("CATS SAMPLE:", cats[0]);
+
         // 🔥 Group products by category
         const grouped: Record<string, CategoryItem[]> = {};
 

@@ -36,14 +36,10 @@ export default function Header({
   onMicPress,
   searchPlaceholder = 'Search "Agnihotra"',
 }: HeaderProps) {
-  const user = useSelector((state: any) => state.user);
+  const isLoggedIn = useSelector((state: any) => state.user?.isLoggedIn);
 
   const handleProfilePress = () => {
-    if (user?.isLoggedIn) {
-      router.push("/profile");
-    } else {
-      router.push("/profile");
-    }
+    router.push("/profile");
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
   ScrollView,
@@ -18,41 +18,31 @@ const bannerImages = [
   require("../../../assets/images/banner2.jpeg"),
 ];
 
-// duplicate for infinite loop illusion
-const loopData = [...bannerImages, ...bannerImages];
-
 export default function BannerCarousel() {
   const scrollRef = useRef<ScrollView>(null);
-  const [index, setIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const indexRef = useRef(0);
 
-  // AUTO SCROLL
+  // AUTO SCROLL — single interval, no cascading effects
   useEffect(() => {
     const interval = setInterval(() => {
-      const nextIndex = index + 1;
-
+      const nextIndex = (indexRef.current + 1) % bannerImages.length;
+      indexRef.current = nextIndex;
+      setActiveIndex(nextIndex);
       scrollRef.current?.scrollTo({
         x: nextIndex * BANNER_WIDTH,
         animated: true,
       });
-
-      setIndex(nextIndex);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [index]);
+  }, []); // runs once — no deps, no re-render loop
 
-  // LOOP RESET (smooth)
-  useEffect(() => {
-    if (index >= bannerImages.length) {
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({
-          x: 0,
-          animated: false,
-        });
-        setIndex(0);
-      }, 300);
-    }
-  }, [index]);
+  const handleScrollEnd = useCallback((e: any) => {
+    const i = Math.round(e.nativeEvent.contentOffset.x / BANNER_WIDTH) % bannerImages.length;
+    indexRef.current = i;
+    setActiveIndex(i);
+  }, []);
 
   return (
     <View style={{ marginTop: 14 }}>
@@ -61,14 +51,9 @@ export default function BannerCarousel() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) => {
-          const i = Math.round(
-            e.nativeEvent.contentOffset.x / BANNER_WIDTH
-          );
-          setIndex(i);
-        }}
+        onMomentumScrollEnd={handleScrollEnd}
       >
-        {loopData.map((imgSource, i) => (
+        {bannerImages.map((imgSource, i) => (
           <View key={i} style={{ width: BANNER_WIDTH }}>
             <View style={styles.bannerCard}>
               <Image
@@ -83,16 +68,12 @@ export default function BannerCarousel() {
 
       {/* DOTS */}
       <View style={styles.dots}>
-        {bannerImages.map((_, i) => {
-          const active = i === index % bannerImages.length;
-
-          return (
-            <View
-              key={i}
-              style={[styles.dot, active && styles.activeDot]}
-            />
-          );
-        })}
+        {bannerImages.map((_, i) => (
+          <View
+            key={i}
+            style={[styles.dot, i === activeIndex && styles.activeDot]}
+          />
+        ))}
       </View>
     </View>
   );
