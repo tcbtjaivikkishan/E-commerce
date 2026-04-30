@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
-  SafeAreaView,
   ScrollView,
   Share,
   StatusBar,
@@ -14,6 +13,7 @@ import {
   View,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../cart/hooks/useCart";
 import { fetchProductById, fetchAllProducts } from "../services/product.api";
@@ -147,8 +147,9 @@ export default function ProductScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
           <ActivityIndicator size="large" color="#0F7B3C" />
         </View>
       </SafeAreaView>
@@ -163,9 +164,10 @@ export default function ProductScreen() {
   const price = getProductPrice(product);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
+      <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.iconBtn}
@@ -310,6 +312,7 @@ export default function ProductScreen() {
           )}
         </TouchableOpacity>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -320,6 +323,7 @@ const GREEN_LIGHT = "#EAF6EF";
 const GREEN_BORDER = "#C4E8D1";
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, backgroundColor: "#F4F6F4" },
 
   header: {

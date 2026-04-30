@@ -2,7 +2,7 @@
 // ─── Zoho Payments SDK wrapper ───────────────────────────────────────────────
 
 import { AppConfig } from '../../../core/config';
-import { fetchOrderById } from '../../orders/services/order.api';
+import { apiRequest } from '../../../shared/services/api.client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -11,6 +11,11 @@ export interface ZohoPaymentResult {
   paymentId?: string;
   orderId?: string;
   errorMessage?: string;
+}
+
+interface VerifyPaymentResponse {
+  status: 'paid' | 'failed' | 'pending';
+  orderId: string;
 }
 
 // ─── SDK helpers ─────────────────────────────────────────────────────────────
@@ -103,9 +108,11 @@ export async function openCheckout(
 // ─── Polling helper ──────────────────────────────────────────────────────────
 
 /**
- * Poll the backend for payment confirmation (webhook may take a few seconds).
+ * Poll the dedicated `/payments/verify/:orderId` endpoint for payment
+ * confirmation. Unlike GET /orders/:id, this endpoint actively checks
+ * the Zoho payment session status and auto-confirms the order if paid.
  *
- * @param orderId     — order to poll
+ * @param orderId     — order to poll (e.g. "ORD-xxxxx")
  * @param maxAttempts — how many times to try (default 10)
  * @param intervalMs  — delay between attempts (default 2 s)
  */
@@ -116,17 +123,29 @@ export async function pollPaymentStatus(
 ): Promise<'paid' | 'failed' | 'pending'> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const order = await fetchOrderById(orderId);
+      console.log(`[POLL] Attempt ${i + 1}/${maxAttempts} for ${orderId}`);
+      const result = await apiRequest<VerifyPaymentResponse>(
+        `/payments/verify/${orderId}`,
+      );
 
-      if (order.paymentStatus === 'paid') return 'paid';
-      if (order.paymentStatus === 'failed') return 'failed';
-    } catch {
+      console.log(`[POLL] Response:`, result.status);
+
+      if (result.status === 'paid') return 'paid';
+      if (result.status === 'failed') return 'failed';
+    } catch (err: any) {
+      // 404 = order not found — stop polling
+      if (err?.message?.includes('404') || err?.message?.includes('Not Found')) {
+        console.warn('[POLL] Order not found, stopping poll');
+        return 'pending';
+      }
       // network blip — keep trying
+      console.warn(`[POLL] Error on attempt ${i + 1}:`, err?.message);
     }
 
     // Wait before next attempt
     await new Promise((r) => setTimeout(r, intervalMs));
   }
 
-  return 'pending'; // webhook hasn't fired yet
+  return 'pending'; // still not confirmed after all attempts
 }
+
