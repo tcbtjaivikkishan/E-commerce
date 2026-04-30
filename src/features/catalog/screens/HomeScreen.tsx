@@ -51,7 +51,7 @@ export default function HomeScreen() {
     return () => { mounted = false; };
   }, []);
 
-  const bestSellers = useMemo(() => (products || []).slice(0, 10), [products]);
+  const bestSellers = useMemo(() => (products || []).slice(10, 20), [products]);
 
   // Show exactly 3 cards + a peek of the 4th
   const CARD_WIDTH = (width - 16 - 10 * 3) / 3.15;

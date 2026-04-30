@@ -12,7 +12,6 @@
       "supportsTablet": true
     },
     "android": {
-      "minSdkVersion": 26,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,7 +42,8 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withZohoMaven"
     ],
     "experiments": {
       "typedRoutes": true,

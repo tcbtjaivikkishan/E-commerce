@@ -1,0 +1,62 @@
+﻿node.exe : (node:24180) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland 
+alternative instead.
+At C:\Program Files\nodejs\eas.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/eas-cli/bin/run" $a ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:24180) [D...native instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(Use `node --trace-deprecation ...` to show where the warning was created)
+- Fetching the buildΓÇª
+ΓêÜ Found a matching build for the project @akshaypatelptn8956/client
+{
+  "id": "b50359e2-845d-4ba0-b748-0c048e6c81bc",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "EAS_BUILD_UNKNOWN_GRADLE_ERROR",
+    "message": "Gradle build failed with unknown error. See logs for the \"Run gradlew\" phase for more information."
+  },
+  "artifacts": {},
+  "fingerprint": {
+    "id": "019dcf56-0941-7a72-8f47-7ac28dc94f30",
+    "hash": "47a7f6fb4fe32ac803599b9d04cd11299ed02f03"
+  },
+  "initiatingActor": {
+    "id": "098d7424-5fd4-41c8-b5ef-8e1d3e465040",
+    "displayName": "akshaypatelptn8956"
+  },
+  "logFiles": [
+    "https://job-logs.eascdn.net/production/b50359e2-845d-4ba0-b748-0c048e6c81bc/1777310946290-8492537e-4d49-4176-8ffc-c3d8e26cbab7.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260427%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260427T172928Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=36825670b8a0f36cc44fa7d60e4fa2a0222973c384886b7e88064bba29f2ae2ac6d242affeabf472b0f7f36a3e49113098763f44fc03456cf924dbff8a7fa923ac2f6c6571f4f0e9678b32bd1ae042777368460ed2cbf106e2e88f434a05816bf53cada156ec2065326395afd26ed25d8be4767bc11e80cdff8ea11d6a7086ee2d893641028c7059f3186bcf008784adac8c87dfbfee7191838700aeda35ce258e134507756c9dc9c67efb23090c3c0786d3db4ae40ca05db8524d9d641556ab5750a724dbfac3a47fb62ff5e695d2d1c58844f76a885630ab7351c3e6cd220519d60948682136f696f521f1bfd4a6138d73c9c263659ec8db5c9c7d591f1af3",
+    "https://job-logs.eascdn.net/production/b50359e2-845d-4ba0-b748-0c048e6c81bc/1777310951240-b03cbeeb-0a15-435e-bd9a-24faf6e0f2ce.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260427%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260427T172928Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=64c9e61ace0e7ed43226b036011ec4f894d0d49a7102b57205d91802bd663920fc46325e1a04d27d9e92d21a8b470b88d6f8058db460f194b4e7f9d73effc2f076698433882062180081ac7efaf4089c9f1270791d6dc6902214cbda4e6f437e993fc94f8df12db3953cc181eb4c22e4c489d621745cbb8abb5143ac10e7b5be31cfc6ce51cc13cf49c40557b3e42ea2fe869520c43abbed1447da9a23528bde5d167ef68fc3bc3bb9064f11fe219ded63324eea342d259f5cd0a6ed62bd527ed0b358a2693ab6c6ec0d837945bd0a720c4277b114436b788eb0002652c6b9742c7916bc34e3ef9cc6a92af69d210b8ec5403a9d56690d8a65dde0e4afa25949",
+    "https://job-logs.eascdn.net/production/b50359e2-845d-4ba0-b748-0c048e6c81bc/1777310951488-e6072c2c-0d90-4eb0-a8e3-934ab137bb86.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260427%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260427T172928Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=7af19fa4be3bdbf9093637708b74a4b3cba7639fabdbe01a15fd4731cbfde0cd498eeeb66d54de0f3251696fe353ccc0787267103ea41bf842b750ca1e5055fc56e6ece0c59b6a876bc5ae2b64f4a49ce61df5b113c0490fce3650b8619fc6612613acf234793d95d64424481f51a22825d3bc3cd826507b27aa30e6a6ef1d35f1cef84348a580a003607371825491e9a572ddac736225ba3066a9c1491b572f92e8870a798cdca419d6e653be7c7c101660d7f3c1cec21bed542902a61a761b804a4021420213c7a00c7ad79bfb4ab49a05836032039d09f834c2d89f19ebc334b3dcb66b7aabcd426297b5e9705a046fdec97eca51a3809eaa14352524d628",
+    "https://job-logs.eascdn.net/production/b50359e2-845d-4ba0-b748-0c048e6c81bc/1777310951702-e029242c-efb3-4fa2-b1bd-b0524990f548.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260427%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260427T173534Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=03bc8810aa78b9d1e97cee3f39f3eccf048122f0264e334c8e714d27ef3637ebe122d7c8e09990404c9129abe26e7e106fe6cb3b4b30f16b91833b652f3d4419932a5852a246937db3947e43f3af4790bba310fcca9dee71c0b6a1d22724581ac3365861699721f5f56dd178928e318e46816efad138a0c953b6ff66240f09aeafa29de5993ffddcd81f91c5260acad0e6a9b8a7540d1e8718147605348e3df865c39208e22ad6e355ce44fe44d9c8661edeb38f268bbe91b945ef4a0857b292b7208d82eeed2c998556839f00248c45392d6fb72069178c5c20212c0f149f8d2c758472460e93678ae735413c9c0bccf1d824d29ded7e95097a19d830c3ea3f"
+  ],
+  "project": {
+    "id": "86b7a4c9-cd18-471d-a3dd-c4eb2eddb16d",
+    "name": "client",
+    "slug": "client",
+    "ownerAccount": {
+      "id": "e9952086-28f5-4714-967d-44c986a1caa4",
+      "name": "akshaypatelptn8956"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "preview",
+  "sdkVersion": "54.0.0",
+  "appVersion": "1.0.0",
+  "appBuildVersion": "1",
+  "gitCommitHash": "c0836a1d5266cbb7a6b22430ee5b82a17aefeee3",
+  "gitCommitMessage": "fixed shipping display issue",
+  "priority": "NORMAL_PLUS",
+  "createdAt": "2026-04-27T17:29:06.046Z",
+  "updatedAt": "2026-04-27T17:32:41.451Z",
+  "completedAt": "2026-04-27T17:32:29.564Z",
+  "expirationDate": "2026-05-11T17:29:06.087Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 108,
+    "buildQueueTime": 50379,
+    "buildDuration": 152316
+  }
+}

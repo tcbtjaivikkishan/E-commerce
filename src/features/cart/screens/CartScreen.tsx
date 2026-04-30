@@ -21,7 +21,7 @@ import {
   calculateShippingRate,
   type ShippingRateResponse,
 } from "../../checkout/services/shipping.api";
-import { openCheckout, pollPaymentStatus } from "../../checkout/services/zoho-payments";
+import { openCheckout } from "../../checkout/services/zoho-payments";
 import { setTempAddress, setTempAddressId } from "../../checkout/store/orderSlice";
 import { fetchCart } from "../services/cart.api";
 import {
@@ -464,19 +464,10 @@ export default function CartScreen() {
         return;
       }
 
-      // 3. Payment success → poll backend to confirm webhook
-      console.log('[CHECKOUT] Verifying payment...');
-      const finalStatus = await pollPaymentStatus(orderId);
-      console.log('[CHECKOUT] Final status:', finalStatus);
-
-      if (finalStatus === 'paid' || finalStatus === 'pending') {
-        router.push('/checkout/success');
-      } else {
-        Alert.alert(
-          'Payment Issue',
-          'Your payment could not be verified. Contact support if money was deducted.',
-        );
-      }
+      // 3. Payment success → navigate immediately!
+      //    (Polling moved to SuccessScreen — runs in background with visual indicator)
+      console.log('[CHECKOUT] Payment success from SDK — navigating to success screen');
+      router.push('/checkout/success');
     } catch (err: any) {
       console.error('[CHECKOUT] Final catch error:', err);
       console.error('[CHECKOUT] Error message:', err?.message);

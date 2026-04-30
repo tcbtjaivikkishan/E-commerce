@@ -97,9 +97,6 @@ export default function ProductScreen() {
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
-  const [selectedVariant, setSelectedVariant] = useState<"500g" | "1kg">(
-    "500g"
-  );
 
   useEffect(() => {
     let mounted = true;
@@ -164,9 +161,6 @@ export default function ProductScreen() {
   const imageUrl = getImageUrl(product);
   const qty = getQty(productId);
   const price = getProductPrice(product);
-
-  const displayPrice =
-    selectedVariant === "500g" ? price : Math.round(price * 1.9);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,7 +236,7 @@ export default function ProductScreen() {
           <View style={styles.priceCartRow}>
             <View>
               <Text style={styles.priceLabel}>Price</Text>
-              <Text style={styles.priceMain}>₹{displayPrice}</Text>
+              <Text style={styles.priceMain}>₹{price}</Text>
             </View>
 
             <QtyControl
@@ -250,40 +244,6 @@ export default function ProductScreen() {
               onAdd={() => add(productId)}
               onRemove={() => remove(productId)}
             />
-          </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.subText}>Select Unit</Text>
-          <View style={styles.variantRow}>
-            {(["500g", "1kg"] as const).map((v) => (
-              <TouchableOpacity
-                key={v}
-                style={[
-                  styles.variantBox,
-                  selectedVariant === v && styles.activeVariant,
-                ]}
-                onPress={() => setSelectedVariant(v)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.variantText,
-                    selectedVariant === v && styles.activeVariantText,
-                  ]}
-                >
-                  {v}
-                </Text>
-                <Text
-                  style={[
-                    styles.variantPrice,
-                    selectedVariant === v && styles.activeVariantPrice,
-                  ]}
-                >
-                  ₹{v === "500g" ? price : Math.round(price * 1.9)}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -330,7 +290,7 @@ export default function ProductScreen() {
         <View style={styles.bottomLeft}>
           <Text style={styles.bottomLabel}>Total</Text>
           <Text style={styles.bottomPrice}>
-            ₹{displayPrice * (qty || 1)}
+            ₹{price * (qty || 1)}
           </Text>
         </View>
 
