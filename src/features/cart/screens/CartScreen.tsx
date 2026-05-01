@@ -21,10 +21,10 @@ import { openCheckout } from "../../checkout/services/zoho-payments";
 import { setTempAddress, setTempAddressId } from "../../checkout/store/orderSlice";
 import {
   calcShippingInBackground,
-  selectShippingStatus,
+  selectShippingCharge,
   selectShippingData,
   selectShippingError,
-  selectShippingCharge,
+  selectShippingStatus,
 } from "../../checkout/store/shippingSlice";
 import {
   addItem,
@@ -334,10 +334,10 @@ export default function CartScreen() {
   const shipping = shippingStatus === 'success' && shippingData
     ? { status: 'success' as const, data: shippingData }
     : shippingStatus === 'loading'
-    ? { status: 'loading' as const }
-    : shippingStatus === 'error'
-    ? { status: 'error' as const, message: shippingError || 'Could not fetch rate' }
-    : { status: 'idle' as const };
+      ? { status: 'loading' as const }
+      : shippingStatus === 'error'
+        ? { status: 'error' as const, message: shippingError || 'Could not fetch rate' }
+        : { status: 'idle' as const };
 
   // Re-trigger shipping calc when address changes (pincode change)
   useEffect(() => {
@@ -373,13 +373,55 @@ export default function CartScreen() {
   const handlePlaceOrder = async () => {
     if (!selectedAddress || isProcessing) return;
 
+    // Guard: ensure the address has a backend _id before proceeding
+    let addressId = selectedAddress._id;
+    if (!addressId) {
+      console.warn('[CHECKOUT] ⚠️ selectedAddress has no _id — fetching fresh addresses from backend...');
+      // Auto-heal: re-fetch user addresses from backend to get _ids
+      try {
+        const { fetchUserProfile } = await import('../../profile/services/user.api');
+        const { setAddresses } = await import('../../auth/store/userSlice');
+        if (userId) {
+          const profile = await fetchUserProfile(userId);
+          if (profile?.addresses && profile.addresses.length > 0) {
+            dispatch(setAddresses(profile.addresses));
+            // Find the matching address by comparing fields
+            const match = profile.addresses.find((a: any) =>
+              a.line1 === selectedAddress.line1 &&
+              a.pincode === selectedAddress.pincode &&
+              a.receiver_phone === selectedAddress.receiver_phone
+            );
+            if (match?._id) {
+              addressId = match._id;
+              console.log('[CHECKOUT] ✅ Recovered _id:', addressId);
+            }
+          }
+        }
+      } catch (fetchErr: any) {
+        console.error('[CHECKOUT] Failed to fetch addresses:', fetchErr?.message);
+      }
+
+      // If still no _id after auto-heal, show error
+      if (!addressId) {
+        console.error('[CHECKOUT] ❌ Could not recover address _id!', JSON.stringify(selectedAddress));
+        Alert.alert(
+          'Address Error',
+          'Your address is missing an ID. Please delete this address, re-add it, and try again.',
+        );
+        return;
+      }
+    }
+
     try {
       setIsProcessing(true);
+
+      // Ensure tempAddressId is set in Redux (in case useEffect hasn't fired yet)
+      dispatch(setTempAddressId(addressId));
 
       // 1. Create order on backend → returns orderId + paymentSessionId
       console.log('[CHECKOUT] Creating order...');
       console.log('[CHECKOUT] Selected address:', JSON.stringify(selectedAddress));
-      console.log('[CHECKOUT] Address _id:', selectedAddress?._id);
+      console.log('[CHECKOUT] Address _id:', addressId);
 
       // Debug: check what the backend cart looks like
       try {
@@ -400,7 +442,7 @@ export default function CartScreen() {
 
       let result;
       try {
-        result = await submitOrderAsync();
+        result = await submitOrderAsync(addressId);
       } catch (orderErr: any) {
         console.error('[CHECKOUT] submitOrderAsync threw:', orderErr);
         console.error('[CHECKOUT] Error type:', typeof orderErr);

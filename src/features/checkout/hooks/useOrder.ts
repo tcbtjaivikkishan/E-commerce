@@ -55,10 +55,12 @@ export function useOrder() {
     dispatch(clearTempData());
   }, [dispatch]);
 
-  /** Place order via backend API — sends addressId */
-  const submitOrderAsync = useCallback(async () => {
-    if (!tempAddressId) throw new Error("Address ID is required");
-    return dispatch(placeOrderAsync(tempAddressId)).unwrap();
+  /** Place order via backend API — sends addressId.
+   *  Accepts an optional override to avoid stale-closure / useEffect race. */
+  const submitOrderAsync = useCallback(async (overrideAddressId?: string) => {
+    const id = overrideAddressId || tempAddressId;
+    if (!id) throw new Error("Address ID is required");
+    return dispatch(placeOrderAsync(id)).unwrap();
   }, [dispatch, tempAddressId]);
 
   /** Legacy local order placement */

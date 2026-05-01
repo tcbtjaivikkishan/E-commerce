@@ -6,12 +6,12 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store/store";
+import { dispatchShippingCalc } from "../../checkout/store/shippingSlice";
 import {
   fetchCart,
   updateCartItem,
   type CartResponse
 } from "../services/cart.api";
-import { dispatchShippingCalc } from "../../checkout/store/shippingSlice";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

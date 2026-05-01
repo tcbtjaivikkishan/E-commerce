@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
-import { addAddress } from "../../auth/store/userSlice";
+import { addAddress, setAddresses } from "../../auth/store/userSlice";
 import { addUserAddress } from "../services/user.api";
 
 const GREEN = "#196F1B";
@@ -264,9 +264,40 @@ export default function AddAddressScreen() {
     setSaving(true);
     try {
       if (userId) {
-        await addUserAddress(userId, addressData);
+        // Backend returns the full user object with _id on each address
+        const updatedUser = await addUserAddress(userId, addressData);
+        console.log('[ADD_ADDR] API response:', JSON.stringify(updatedUser));
+        console.log('[ADD_ADDR] Has addresses?', !!updatedUser?.addresses, 'count:', updatedUser?.addresses?.length);
+        
+        // Replace all addresses in Redux with the backend's version (which has _ids)
+        if (updatedUser?.addresses && updatedUser.addresses.length > 0) {
+          // Verify _ids are present
+          const hasIds = updatedUser.addresses.every((a: any) => !!a._id);
+          console.log('[ADD_ADDR] All addresses have _id?', hasIds);
+          dispatch(setAddresses(updatedUser.addresses));
+        } else {
+          // Fallback: fetch user profile to get addresses with _ids
+          console.warn('[ADD_ADDR] API response missing addresses, fetching user profile...');
+          try {
+            const { fetchUserProfile } = await import('../services/user.api');
+            const userProfile = await fetchUserProfile(userId);
+            if (userProfile?.addresses && userProfile.addresses.length > 0) {
+              console.log('[ADD_ADDR] Fetched profile addresses:', userProfile.addresses.length);
+              dispatch(setAddresses(userProfile.addresses));
+            } else {
+              // Last resort: add locally without _id
+              console.error('[ADD_ADDR] ⚠️ Could not get _id — adding locally');
+              dispatch(addAddress(addressData));
+            }
+          } catch (fetchErr: any) {
+            console.error('[ADD_ADDR] Profile fetch failed:', fetchErr?.message);
+            dispatch(addAddress(addressData));
+          }
+        }
+      } else {
+        // No userId — just store locally (guest user)
+        dispatch(addAddress(addressData));
       }
-      dispatch(addAddress(addressData));
       Alert.alert("Success", "Address saved successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
