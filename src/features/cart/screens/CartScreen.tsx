@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,6 +10,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -67,6 +68,13 @@ const PIN_ICON = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
 
 const HOME_ICON = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
   <path d="M2 8L9 2L16 8V16H11V12H7V16H2V8Z" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>`;
+
+const COUPON_ICON = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+  <rect x="1" y="4" width="16" height="10" rx="2" stroke="#196F1B" stroke-width="1.4"/>
+  <circle cx="9" cy="9" r="2" stroke="#196F1B" stroke-width="1.2"/>
+  <path d="M1 7.5a1.5 1.5 0 1 1 0 3" stroke="#196F1B" stroke-width="1.2"/>
+  <path d="M17 7.5a1.5 1.5 0 1 0 0 3" stroke="#196F1B" stroke-width="1.2"/>
 </svg>`;
 
 
@@ -319,6 +327,12 @@ export default function CartScreen() {
   const [selectedAddressIdx, setSelectedAddressIdx] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // ── Coupon state ──
+  const [couponCode, setCouponCode] = useState('');
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'applied' | 'error'>('idle');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState('');
+
   const { submitOrderAsync } = useOrder();
 
   const addresses = userAddresses;
@@ -348,7 +362,46 @@ export default function CartScreen() {
     dispatch(calcShippingInBackground({ pincode }));
   }, [selectedAddress?.pincode, selectedAddress?._id]);
 
-  const grandTotal = subtotal + Math.round(shippingCharge);
+  const grandTotal = Math.max(0, subtotal + Math.round(shippingCharge) - couponDiscount);
+
+  // ── Coupon handlers ──
+  const handleApplyCoupon = useCallback(async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    setCouponStatus('loading');
+    try {
+      // TODO: Replace with real API call → POST /coupons/validate { code, subtotal }
+      // For now, simulate a backend call
+      await new Promise(r => setTimeout(r, 800));
+
+      // Example hardcoded coupons (replace with backend response)
+      if (code === 'TCBT10') {
+        const disc = Math.round(subtotal * 0.10);
+        setCouponDiscount(disc);
+        setCouponMessage(`10% off applied! You save ₹${disc}`);
+        setCouponStatus('applied');
+      } else if (code === 'FLAT50') {
+        setCouponDiscount(50);
+        setCouponMessage('Flat ₹50 off applied!');
+        setCouponStatus('applied');
+      } else {
+        setCouponDiscount(0);
+        setCouponMessage('Invalid coupon code');
+        setCouponStatus('error');
+      }
+    } catch (err: any) {
+      setCouponDiscount(0);
+      setCouponMessage(err?.message || 'Could not validate coupon');
+      setCouponStatus('error');
+    }
+  }, [couponCode, subtotal]);
+
+  const handleRemoveCoupon = useCallback(() => {
+    setCouponCode('');
+    setCouponDiscount(0);
+    setCouponMessage('');
+    setCouponStatus('idle');
+  }, []);
 
   // ── Sync selected address into orderSlice whenever it changes ──────────────
   useEffect(() => {
@@ -542,6 +595,67 @@ export default function CartScreen() {
               ))}
             </View>
 
+            {/* Coupon */}
+            <View style={styles.card}>
+              <View style={styles.sectionHeaderRow}>
+                <SvgXml xml={COUPON_ICON} width={18} height={18} />
+                <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
+                  Apply Coupon
+                </Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              {couponStatus === 'applied' ? (
+                /* ── Applied state ── */
+                <View style={styles.couponAppliedRow}>
+                  <View style={styles.couponAppliedLeft}>
+                    <View style={styles.couponBadge}>
+                      <Text style={styles.couponBadgeText}>{couponCode}</Text>
+                    </View>
+                    <Text style={styles.couponSuccessMsg}>{couponMessage}</Text>
+                  </View>
+                  <TouchableOpacity onPress={handleRemoveCoupon} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={styles.couponRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                /* ── Input state ── */
+                <>
+                  <View style={styles.couponInputRow}>
+                    <TextInput
+                      style={styles.couponInput}
+                      placeholder="Enter coupon code"
+                      placeholderTextColor="#999"
+                      value={couponCode}
+                      onChangeText={(t) => { setCouponCode(t.toUpperCase()); if (couponStatus === 'error') setCouponStatus('idle'); }}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      editable={couponStatus !== 'loading'}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.couponApplyBtn,
+                        (!couponCode.trim() || couponStatus === 'loading') && styles.couponApplyBtnDisabled,
+                      ]}
+                      onPress={handleApplyCoupon}
+                      disabled={!couponCode.trim() || couponStatus === 'loading'}
+                      activeOpacity={0.85}
+                    >
+                      {couponStatus === 'loading' ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.couponApplyText}>Apply</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  {couponStatus === 'error' && (
+                    <Text style={styles.couponErrorMsg}>{couponMessage}</Text>
+                  )}
+                </>
+              )}
+            </View>
+
             {/* Bill */}
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
@@ -582,6 +696,13 @@ export default function CartScreen() {
 
               {shipping.status === 'error' && (
                 <Text style={styles.shippingErrorText}>⚠️ {shipping.message}</Text>
+              )}
+
+              {couponDiscount > 0 && (
+                <View style={styles.billRow}>
+                  <Text style={[styles.billLabel, { color: '#196F1B' }]}>Coupon discount</Text>
+                  <Text style={[styles.billValue, { color: '#196F1B', fontWeight: '600' }]}>−₹{couponDiscount}</Text>
+                </View>
               )}
 
               <View style={styles.divider} />
@@ -774,6 +895,88 @@ const styles = StyleSheet.create({
   billValueBold: { fontWeight: "700" },
 
   policyText: { fontSize: 12, color: "#666" },
+
+  // ── Coupon ──
+  couponInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  couponInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#FAFAFA',
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  couponApplyBtn: {
+    backgroundColor: '#196F1B',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  couponApplyBtnDisabled: {
+    backgroundColor: '#A5C8A6',
+  },
+  couponApplyText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  couponErrorMsg: {
+    fontSize: 11,
+    color: '#EF4444',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  couponAppliedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EBF5EB',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  couponAppliedLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  couponBadge: {
+    backgroundColor: '#196F1B',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  couponBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  couponSuccessMsg: {
+    fontSize: 12,
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  couponRemoveText: {
+    fontSize: 16,
+    color: '#EF4444',
+    fontWeight: '700',
+    padding: 4,
+  },
 
   // ── Fixed bottom zone (address + button) ──
   bottomZone: {
