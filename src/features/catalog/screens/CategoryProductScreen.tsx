@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   StatusBar,
@@ -20,10 +19,6 @@ import {
 
 import { useCart } from "@/src/features/cart/hooks/useCart";
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 42) / 2;
-
-// ─── Helpers ───────────────────────────────────────
 const getImageUrl = (p: ApiProductResponse): string | null => {
   if (p.image?.image_url) return p.image.image_url;
   return null;
@@ -32,7 +27,7 @@ const getImageUrl = (p: ApiProductResponse): string | null => {
 const getProductId = (p: any): string =>
   p._id || p.zoho_item_id || String(p.item_id);
 
-// ─── Qty Control (same as ProductScreen) ───────────
+
 function QtyControl({
   qty,
   onAdd,
@@ -65,8 +60,10 @@ function QtyControl({
   );
 }
 
-// ─── Product Card ──────────────────────────────────
-const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
+const ProductCard: React.FC<{
+  item: ApiProductResponse;
+  onAddToast: () => void;
+}> = ({ item, onAddToast }) => {
   const { add, remove, getQty } = useCart();
 
   const productId = getProductId(item);
@@ -83,7 +80,7 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
         router.push(`/product/${productId}` as any)
       }
     >
-      {/* Image */}
+      { }
       <View style={styles.cardImageBox}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.cardImage} />
@@ -93,7 +90,7 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
           </View>
         )}
 
-        {/* Wishlist */}
+        { }
         <TouchableOpacity
           style={styles.wishlistBtn}
           onPress={() => setWishlisted((prev) => !prev)}
@@ -106,7 +103,7 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Body */}
+      { }
       <View style={styles.cardBody}>
         <Text style={styles.cardName} numberOfLines={2}>
           {item.name}
@@ -117,7 +114,10 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
 
           <QtyControl
             qty={qty}
-            onAdd={() => add(productId)}
+            onAdd={() => {
+              add(productId);
+              onAddToast();
+            }}
             onRemove={() => remove(productId)}
           />
         </View>
@@ -126,7 +126,7 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
   );
 };
 
-// ─── Main Screen ───────────────────────────────────
+
 export default function CategoryProductsScreen() {
   const { categoryId, categoryName } = useLocalSearchParams();
 
@@ -136,6 +136,7 @@ export default function CategoryProductsScreen() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [showCartToast, setShowCartToast] = useState(false);
 
   const loadProducts = async (pageNumber = 1, append = false) => {
     try {
@@ -173,6 +174,16 @@ export default function CategoryProductsScreen() {
     }
   };
 
+  useEffect(() => {
+    if (!showCartToast) return;
+
+    const timer = setTimeout(() => {
+      setShowCartToast(false);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [showCartToast]);
+
   if (loading && products.length === 0) {
     return (
       <View style={styles.safeArea}>
@@ -189,7 +200,7 @@ export default function CategoryProductsScreen() {
     <View style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
+      { }
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={20} />
@@ -210,18 +221,34 @@ export default function CategoryProductsScreen() {
         contentContainerStyle={{ padding: 14, gap: 12 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        renderItem={({ item }) => <ProductCard item={item} />}
-        ListFooterComponent={
+        renderItem={({ item }) => (
+          <ProductCard item={item} onAddToast={() => setShowCartToast(true)} />
+        )} ListFooterComponent={
           loadingMore ? (
             <ActivityIndicator style={{ marginVertical: 20 }} />
           ) : null
         }
       />
+      {showCartToast && (
+        <View style={styles.toastContainer}>
+          <TouchableOpacity
+            style={styles.toastBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              setShowCartToast(false);
+              router.push("/cart");
+            }}
+          >
+            <Ionicons name="cart" size={18} color="#fff" />
+            <Text style={styles.toastText}>View Cart</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
 
-// ─── Styles (added qty styles) ─────────────────────
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
 
@@ -285,7 +312,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
 
-  // ✅ Qty styles
+
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -315,5 +342,29 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: "#0F7B3C",
     fontWeight: "700",
+  },
+  toastContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 16,
+    right: 16,
+    zIndex: 999,
+  },
+
+  toastBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0F7B3C",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 6,
+  },
+
+  toastText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
   },
 });
