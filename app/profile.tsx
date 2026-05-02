@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { logoutUser } from "../src/features/auth/services/auth.service";
-import { logout } from "../src/features/auth/store/userSlice";
+import { RESET_APP } from "../src/store/resetAction";
 import { useAppDispatch, useAppSelector } from "../src/shared/hooks/useRedux";
 
 const GREEN = "#196F1B";
@@ -29,8 +29,8 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           await logoutUser();
-          dispatch(logout());
-          router.replace("/home" as any);
+          dispatch(RESET_APP());
+          router.replace("/login" as any);
         },
       },
     ]);

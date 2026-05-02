@@ -1,6 +1,7 @@
 // src/features/orders/store/ordersSlice.ts
 import { createAsyncThunk, createSlice, createSelector } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store/store";
+import { RESET_APP } from "../../../store/resetAction";
 import {
   fetchOrders,
   fetchOrderById,
@@ -119,7 +120,10 @@ const ordersSlice = createSlice({
         if (state.currentOrder?.orderId === orderId) {
           state.currentOrder.orderStatus = "cancelled";
         }
-      });
+      })
+
+      // ── Global reset on logout ──
+      .addCase(RESET_APP, () => initialState);
   },
 });
 

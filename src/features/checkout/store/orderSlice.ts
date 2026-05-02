@@ -2,6 +2,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { OrderAddress, OrderPayment, OrderSummary } from "../types/order.types";
 import type { RootState } from "../../../store/store";
+import { RESET_APP } from "../../../store/resetAction";
 import { createOrder } from "../../orders/services/order.api";
 
 // ─── State ───
@@ -113,7 +114,10 @@ export const orderSlice = createSlice({
       .addCase(placeOrderAsync.rejected, (state, action) => {
         state.status = "error";
         state.error = action.payload as string;
-      });
+      })
+
+      // ── Global reset on logout ──
+      .addCase(RESET_APP, () => initialState);
   },
 });
 

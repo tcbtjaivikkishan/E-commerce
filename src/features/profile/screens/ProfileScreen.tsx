@@ -14,7 +14,8 @@ import {
 import { C } from "../../../core/theme";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
 import { logoutUser } from "../../auth/services/auth.service";
-import { logout, updateProfile } from "../../auth/store/userSlice";
+import { RESET_APP } from "../../../store/resetAction";
+import { updateProfile } from "../../auth/store/userSlice";
 import { updateUserProfile } from "../services/user.api";
 
 const MENU_SECTIONS = [
@@ -60,8 +61,8 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           await logoutUser();
-          dispatch(logout());
-          router.replace("/home" as any);
+          dispatch(RESET_APP());
+          router.replace("/login" as any);
         },
       },
     ]);

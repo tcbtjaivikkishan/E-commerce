@@ -6,6 +6,7 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store/store";
+import { RESET_APP } from "../../../store/resetAction";
 import { dispatchShippingCalc } from "../../checkout/store/shippingSlice";
 import {
   fetchCart,
@@ -173,6 +174,9 @@ export const cartSlice = createSlice({
       state.error = action.payload as string;
       // On error, we could revert optimistic update — for now just log
     });
+
+    // ── Global reset on logout ──
+    builder.addCase(RESET_APP, () => initialState);
   },
 });
 

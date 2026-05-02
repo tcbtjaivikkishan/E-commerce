@@ -1,6 +1,7 @@
 // src/features/auth/store/userSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { UserState, LoginPayload, UserAddress } from "../types/auth.types";
+import { RESET_APP } from "../../../store/resetAction";
 
 const initialState: UserState = {
   isLoggedIn: false,
@@ -59,6 +60,10 @@ const userSlice = createSlice({
     ) {
       state.addresses[action.payload.index] = action.payload.address;
     },
+  },
+  extraReducers: (builder) => {
+    // ── Global reset on logout ──
+    builder.addCase(RESET_APP, () => initialState);
   },
 });
 

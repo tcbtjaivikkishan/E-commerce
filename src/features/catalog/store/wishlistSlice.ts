@@ -1,6 +1,7 @@
 // src/features/catalog/store/wishlistSlice.ts
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store/store";
+import { RESET_APP } from "../../../store/resetAction";
 import {
   fetchWishlist,
   addToWishlist,
@@ -98,7 +99,10 @@ const wishlistSlice = createSlice({
       })
       .addCase(removeWishlistItem.fulfilled, (state, action) => {
         handleFulfilled(state, action.payload);
-      });
+      })
+
+      // ── Global reset on logout ──
+      .addCase(RESET_APP, () => initialState);
   },
 });
 

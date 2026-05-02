@@ -7,6 +7,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { fetchCart } from "../../cart/services/cart.api";
 import { calculateShippingRate, type ShippingRateResponse } from "../services/shipping.api";
 import type { RootState } from "../../../store/store";
+import { RESET_APP } from "../../../store/resetAction";
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,9 @@ const shippingSlice = createSlice({
       state.status = "error";
       state.errorMessage = (action.payload as string) || "Unknown error";
     });
+
+    // ── Global reset on logout ──
+    builder.addCase(RESET_APP, () => initialState);
   },
 });
 
