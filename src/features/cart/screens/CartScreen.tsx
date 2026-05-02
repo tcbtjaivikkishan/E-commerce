@@ -333,6 +333,8 @@ export default function CartScreen() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState('');
   const [couponId, setCouponId] = useState<string | null>(null);
+  const [couponType, setCouponType] = useState<'flat' | 'percent' | null>(null);
+  const [couponValue, setCouponValue] = useState(0);
 
   const { submitOrderAsync } = useOrder();
 
@@ -401,6 +403,8 @@ export default function CartScreen() {
       console.log('[COUPON] Type:', coupon.type, '| Value:', coupon.value, '| Subtotal:', subtotal, '| Discount:', disc, '| CouponId:', coupon._id);
 
       setCouponId(coupon._id);
+      setCouponType(coupon.type);
+      setCouponValue(coupon.value);
       setCouponDiscount(disc);
       setCouponCode(coupon.name);
       setCouponMessage(
@@ -424,7 +428,27 @@ export default function CartScreen() {
     setCouponMessage('');
     setCouponStatus('idle');
     setCouponId(null);
+    setCouponType(null);
+    setCouponValue(0);
   }, []);
+
+  // ── Recalculate coupon discount when subtotal changes (for percentage coupons) ──
+  useEffect(() => {
+    if (couponStatus !== 'applied' || !couponType) return;
+    let newDisc = 0;
+    if (couponType === 'percent') {
+      newDisc = Math.round((subtotal * couponValue) / 100);
+    } else {
+      newDisc = couponValue;
+    }
+    console.log('[COUPON] Recalc → subtotal:', subtotal, '| type:', couponType, '| value:', couponValue, '| newDisc:', newDisc);
+    setCouponDiscount(newDisc);
+    setCouponMessage(
+      couponType === 'percent'
+        ? `${couponValue}% off applied! You save ₹${newDisc}`
+        : `Flat ₹${newDisc} off applied!`
+    );
+  }, [subtotal, couponStatus, couponType, couponValue]);
 
   // ── Sync selected address into orderSlice whenever it changes ──────────────
   useEffect(() => {
