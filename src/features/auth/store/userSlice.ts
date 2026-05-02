@@ -51,8 +51,10 @@ const userSlice = createSlice({
     addAddress(state, action: PayloadAction<UserAddress>) {
       state.addresses.push(action.payload);
     },
-    removeAddress(state, action: PayloadAction<number>) {
-      state.addresses.splice(action.payload, 1);
+    removeAddress(state, action: PayloadAction<string>) {
+      state.addresses = state.addresses.filter(
+        (addr) => addr._id !== action.payload
+      );
     },
     updateAddress(
       state,

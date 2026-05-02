@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { UserAddress } from "../../auth/types/auth.types";
-import { removeAddress, updateAddress } from "../../auth/store/userSlice";
+import { removeAddress, setAddresses, updateAddress } from "../../auth/store/userSlice";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
 import { deleteUserAddress, updateUserAddress } from "../services/user.api";
 
@@ -326,11 +326,20 @@ export default function AddressBookScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              if (userId && addr?._id) await deleteUserAddress(userId, addr._id);
-            } catch (_) {
-              // silent — local state still updates
-            } finally {
-              dispatch(removeAddress(index));
+              if (userId && addr?._id) {
+                const updatedAddresses = await deleteUserAddress(userId, addr._id);
+                // Backend returns the updated addresses array directly
+                if (Array.isArray(updatedAddresses)) {
+                  dispatch(setAddresses(updatedAddresses));
+                } else {
+                  dispatch(removeAddress(addr._id));
+                }
+              } else {
+                // No backend ID — remove locally only
+                if (addr?._id) dispatch(removeAddress(addr._id));
+              }
+            } catch (err: any) {
+              Alert.alert("Error", "Failed to delete address. Please try again.");
             }
           },
         },

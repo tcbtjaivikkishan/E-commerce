@@ -26,12 +26,13 @@ export async function updateUserProfile(
 
 /**
  * PATCH /users/:id/address — add a new address [JWT]
+ * Backend returns the updated addresses array directly.
  */
 export async function addUserAddress(
   userId: string,
   address: Partial<UserAddress>
-): Promise<BackendUser> {
-  return apiRequest<BackendUser>(`/users/${userId}/address`, {
+): Promise<UserAddress[]> {
+  return apiRequest<UserAddress[]>(`/users/${userId}/address`, {
     method: "PATCH",
     body: address,
   });
@@ -39,12 +40,13 @@ export async function addUserAddress(
 
 /**
  * DELETE /users/:id/address/:addressId — delete an address [JWT]
+ * Backend returns the updated addresses array directly.
  */
 export async function deleteUserAddress(
   userId: string,
   addressId: string
-): Promise<BackendUser> {
-  return apiRequest<BackendUser>(`/users/${userId}/address/${addressId}`, {
+): Promise<UserAddress[]> {
+  return apiRequest<UserAddress[]>(`/users/${userId}/address/${addressId}`, {
     method: "DELETE",
   });
 }

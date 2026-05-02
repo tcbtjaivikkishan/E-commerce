@@ -264,17 +264,17 @@ export default function AddAddressScreen() {
     setSaving(true);
     try {
       if (userId) {
-        // Backend returns the full user object with _id on each address
-        const updatedUser = await addUserAddress(userId, addressData);
-        console.log('[ADD_ADDR] API response:', JSON.stringify(updatedUser));
-        console.log('[ADD_ADDR] Has addresses?', !!updatedUser?.addresses, 'count:', updatedUser?.addresses?.length);
+        // Backend returns the updated addresses array directly (with _ids)
+        const updatedAddresses = await addUserAddress(userId, addressData);
+        console.log('[ADD_ADDR] API response:', JSON.stringify(updatedAddresses));
+        console.log('[ADD_ADDR] Is array?', Array.isArray(updatedAddresses), 'count:', updatedAddresses?.length);
         
         // Replace all addresses in Redux with the backend's version (which has _ids)
-        if (updatedUser?.addresses && updatedUser.addresses.length > 0) {
+        if (Array.isArray(updatedAddresses) && updatedAddresses.length > 0) {
           // Verify _ids are present
-          const hasIds = updatedUser.addresses.every((a: any) => !!a._id);
+          const hasIds = updatedAddresses.every((a: any) => !!a._id);
           console.log('[ADD_ADDR] All addresses have _id?', hasIds);
-          dispatch(setAddresses(updatedUser.addresses));
+          dispatch(setAddresses(updatedAddresses));
         } else {
           // Fallback: fetch user profile to get addresses with _ids
           console.warn('[ADD_ADDR] API response missing addresses, fetching user profile...');

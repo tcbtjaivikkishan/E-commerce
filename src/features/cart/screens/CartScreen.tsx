@@ -327,6 +327,21 @@ export default function CartScreen() {
   const [selectedAddressIdx, setSelectedAddressIdx] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const addresses = userAddresses;
+  const prevAddrCount = useRef(addresses.length);
+
+  // ── Auto-select newest address when user adds one, clamp on delete ──
+  useEffect(() => {
+    if (addresses.length > prevAddrCount.current) {
+      // A new address was added → select it (it's the last one)
+      setSelectedAddressIdx(addresses.length - 1);
+    } else if (addresses.length < prevAddrCount.current && selectedAddressIdx >= addresses.length) {
+      // An address was deleted and current selection is out of bounds → clamp
+      setSelectedAddressIdx(Math.max(0, addresses.length - 1));
+    }
+    prevAddrCount.current = addresses.length;
+  }, [addresses.length]);
+
   // ── Coupon state ──
   const [couponCode, setCouponCode] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'applied' | 'error'>('idle');
@@ -338,7 +353,6 @@ export default function CartScreen() {
 
   const { submitOrderAsync } = useOrder();
 
-  const addresses = userAddresses;
   const selectedAddress = addresses[selectedAddressIdx] ?? addresses[0] ?? null;
 
   // ── Shipping from Redux (pre-calculated in background) ─────────────────────

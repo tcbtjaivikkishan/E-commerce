@@ -205,7 +205,7 @@ export default function SuccessScreen() {
     const timer = setTimeout(() => {
       reset();
       router.replace('/(tabs)/home' as any);
-    }, 8000);
+    }, 30000);
     return () => clearTimeout(timer);
   }, []);
 
