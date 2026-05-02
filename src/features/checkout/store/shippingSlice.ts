@@ -40,8 +40,15 @@ export const calcShippingInBackground = createAsyncThunk<
   { rejectValue: string }
 >(
   "shipping/calcRate",
-  async ({ pincode, totalWeight: providedWeight }, { rejectWithValue }) => {
+  async ({ pincode, totalWeight: providedWeight }, { rejectWithValue, getState }) => {
     try {
+      // Log the user address being used for shipping calculation
+      const state = getState() as RootState;
+      const addresses = state.user.addresses || [];
+      const matchedAddress = addresses.find((a: any) => Number(a.pincode) === pincode);
+      console.log("[SHIPPING BG] 📍 User address for shipping:", JSON.stringify(matchedAddress || { pincode, note: 'no matching address found' }));
+      console.log("[SHIPPING BG] 📍 All user addresses:", JSON.stringify(addresses.map((a: any) => ({ label: a.label, pincode: a.pincode, city: a.city, _id: a._id }))));
+
       // Use provided weight or fetch from backend
       let totalWeight = providedWeight ?? 0;
 
@@ -57,7 +64,7 @@ export const calcShippingInBackground = createAsyncThunk<
       }
 
       const result = await calculateShippingRate(totalWeight, pincode);
-      console.log("[SHIPPING BG] Rate:", result.shippingCharge, result.courier);
+      console.log("[SHIPPING BG] ✅ Rate:", result.shippingCharge, result.courier);
       return result;
     } catch (err: any) {
       console.error("[SHIPPING BG] Error:", err?.message);
@@ -129,11 +136,21 @@ export function dispatchShippingCalc(
 
   _debounceTimer = setTimeout(() => {
     const state = getState();
+
+    // Use the pincode from the last selected address (set by CartScreen)
+    // instead of always defaulting to addresses[0]
+    const lastPincode = state.shipping.lastPincode;
     const addresses = state.user.addresses || [];
-    const selectedAddress = addresses[0];
-    const pincode = Number(selectedAddress?.pincode);
+    const fallbackAddress = addresses[0];
+    const pincode = lastPincode || Number(fallbackAddress?.pincode);
+
+    console.log("[SHIPPING DISPATCH] 📍 lastPincode:", lastPincode,
+      "| fallback (addresses[0]):", fallbackAddress?.pincode,
+      "| using pincode:", pincode,
+      "| address label:", addresses.find((a: any) => Number(a.pincode) === pincode)?.label || 'N/A');
 
     if (!pincode || Object.keys(state.cart.items).length === 0) {
+      console.log("[SHIPPING DISPATCH] ⚠️ Skipped — pincode:", pincode, "cart empty:", Object.keys(state.cart.items).length === 0);
       return;
     }
 

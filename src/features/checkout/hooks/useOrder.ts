@@ -55,12 +55,12 @@ export function useOrder() {
     dispatch(clearTempData());
   }, [dispatch]);
 
-  /** Place order via backend API — sends addressId.
+  /** Place order via backend API — sends addressId + optional couponId.
    *  Accepts an optional override to avoid stale-closure / useEffect race. */
-  const submitOrderAsync = useCallback(async (overrideAddressId?: string) => {
+  const submitOrderAsync = useCallback(async (overrideAddressId?: string, couponId?: string) => {
     const id = overrideAddressId || tempAddressId;
     if (!id) throw new Error("Address ID is required");
-    return dispatch(placeOrderAsync(id)).unwrap();
+    return dispatch(placeOrderAsync({ addressId: id, couponId })).unwrap();
   }, [dispatch, tempAddressId]);
 
   /** Legacy local order placement */

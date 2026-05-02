@@ -1,5 +1,5 @@
 // src/features/orders/store/ordersSlice.ts
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, createSelector } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store/store";
 import {
   fetchOrders,
@@ -133,8 +133,9 @@ export const selectCurrentOrderDetail = (state: RootState) =>
   state.orders.currentOrder;
 export const selectOrdersLoading = (state: RootState) => state.orders.loading;
 export const selectOrdersError = (state: RootState) => state.orders.error;
-export const selectOrdersPagination = (state: RootState) => ({
-  total: state.orders.total,
-  page: state.orders.page,
-  totalPages: state.orders.totalPages,
-});
+export const selectOrdersPagination = createSelector(
+  (state: RootState) => state.orders.total,
+  (state: RootState) => state.orders.page,
+  (state: RootState) => state.orders.totalPages,
+  (total, page, totalPages) => ({ total, page, totalPages })
+);

@@ -116,20 +116,19 @@ export default function CategoryScreen(): React.JSX.Element {
       try {
         setLoading(true);
 
-        // ✅ FIXED (no .data)
         const cats: ApiCategory[] = await fetchAllCategories();
         const products: ApiProductResponse[] = await fetchAllProducts();
 
+        // Group products by category_name (API no longer returns category_id)
         const grouped: Record<string, CategoryItem[]> = {};
 
         products.forEach((p) => {
-          if (!p.category_id) return;
+          const catName = (p as any).category_name || p.category_name;
+          if (!catName) return;
 
-          const catId = p.category_id;
+          if (!grouped[catName]) grouped[catName] = [];
 
-          if (!grouped[catId]) grouped[catId] = [];
-
-          grouped[catId].push({
+          grouped[catName].push({
             id: p._id || p.zoho_item_id,
             item_id: p._id || p.zoho_item_id,
             name: p.name,
@@ -141,9 +140,10 @@ export default function CategoryScreen(): React.JSX.Element {
           (c: ApiCategory) => c.id && c.name
         );
 
+        // Match categories to grouped products by name
         const finalCategories: Category[] = validCategories
           .map((c: ApiCategory) => {
-            const items = grouped[c.id] || [];
+            const items = grouped[c.name] || [];
 
             return {
               id: c.id,
@@ -157,7 +157,7 @@ export default function CategoryScreen(): React.JSX.Element {
 
         if (mounted) setCategories(finalCategories);
       } catch (err) {
-        console.warn("Category screen error:", err);
+        console.error("Category screen error:", err);
       } finally {
         if (mounted) setLoading(false);
       }

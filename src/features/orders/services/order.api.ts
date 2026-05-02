@@ -62,12 +62,18 @@ export interface PaginatedOrdersResponse {
 
 /**
  * POST /orders — create order from cart [JWT]
- * Backend expects: { addressId: "mongo_id" }
+ * Backend expects: { addressId: "mongo_id", couponId?: "coupon_mongo_id" }
  */
-export async function createOrder(addressId: string): Promise<CreateOrderResponse> {
+export async function createOrder(
+  addressId: string,
+  couponId?: string
+): Promise<CreateOrderResponse> {
+  const body: Record<string, string> = { addressId };
+  if (couponId) body.couponId = couponId;
+
   return apiRequest<CreateOrderResponse>("/orders", {
     method: "POST",
-    body: { addressId },
+    body,
   });
 }
 

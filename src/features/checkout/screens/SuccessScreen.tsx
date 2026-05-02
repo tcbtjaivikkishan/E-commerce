@@ -285,13 +285,6 @@ export default function SuccessScreen() {
                 <Text style={st.summaryLabel}>ORDER ID</Text>
                 <Text style={st.summaryValue} numberOfLines={1}>#{currentOrder.id}</Text>
               </View>
-              <View style={st.summaryDot} />
-              <View style={st.summaryItem}>
-                <Text style={st.summaryLabel}>ITEMS</Text>
-                <Text style={st.summaryValue}>
-                  {currentOrder.itemsCount} item{currentOrder.itemsCount > 1 ? 's' : ''}
-                </Text>
-              </View>
             </View>
 
             {currentOrder.total > 0 && (

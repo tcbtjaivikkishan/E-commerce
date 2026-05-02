@@ -86,7 +86,7 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
       {/* Image */}
       <View style={styles.cardImageBox}>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.cardImage} />
+          <Image source={{ uri: imageUrl }} style={styles.cardImage} resizeMode="contain" />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Ionicons name="leaf-outline" size={28} color="#C8A84B" />
@@ -249,8 +249,10 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+    padding: 10,
   },
-  cardImage: { width: "80%", height: "80%" },
+  cardImage: { width: "100%", height: "100%" },
 
   imagePlaceholder: {
     width: 60,

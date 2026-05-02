@@ -29,12 +29,12 @@ const initialState: OrderState = {
 export const placeOrderAsync = createAsyncThunk(
   "order/placeAsync",
   async (
-    addressId: string,
+    { addressId, couponId }: { addressId: string; couponId?: string },
     { rejectWithValue }
   ) => {
     try {
-      console.log('[ORDER THUNK] Calling createOrder with addressId:', addressId);
-      const response = await createOrder(addressId);
+      console.log('[ORDER THUNK] Calling createOrder with addressId:', addressId, 'couponId:', couponId);
+      const response = await createOrder(addressId, couponId);
       console.log('[ORDER THUNK] createOrder response:', JSON.stringify(response));
       return response;
     } catch (err: any) {

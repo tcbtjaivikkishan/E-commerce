@@ -153,7 +153,7 @@ function AddressBottomSheet({
                 <Text style={styles.addrLine} numberOfLines={2}>
                   {addr.line1}{addr.city ? `, ${addr.city}` : ""}{addr.state ? `, ${addr.state}` : ""}
                 </Text>
-                <Text style={styles.addrPhone}>Phone: {userPhone || ""}</Text>
+                <Text style={styles.addrPhone}>Phone: {addr.receiver_phone || userPhone || ""}</Text>
               </View>
 
               <View
@@ -332,6 +332,7 @@ export default function CartScreen() {
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'applied' | 'error'>('idle');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState('');
+  const [couponId, setCouponId] = useState<string | null>(null);
 
   const { submitOrderAsync } = useOrder();
 
@@ -356,8 +357,22 @@ export default function CartScreen() {
   // Re-trigger shipping calc when address changes (pincode change)
   useEffect(() => {
     const pincode = Number(selectedAddress?.pincode);
-    if (!pincode || cartItems.length === 0) return;
+    console.log("[CART] 📍 Address changed → selectedAddress:", JSON.stringify({
+      _id: selectedAddress?._id,
+      label: selectedAddress?.label,
+      pincode: selectedAddress?.pincode,
+      city: selectedAddress?.city,
+      state: selectedAddress?.state,
+      line1: selectedAddress?.line1,
+    }));
+    console.log("[CART] 📍 Selected address index:", selectedAddressIdx, "| Total addresses:", addresses.length);
 
+    if (!pincode || cartItems.length === 0) {
+      console.log("[CART] ⚠️ Skipping shipping calc — pincode:", pincode, "cartItems:", cartItems.length);
+      return;
+    }
+
+    console.log("[CART] 🚚 Dispatching shipping calc with pincode:", pincode);
     // Only recalculate if the pincode differs from what's already cached
     dispatch(calcShippingInBackground({ pincode }));
   }, [selectedAddress?.pincode, selectedAddress?._id]);
@@ -367,31 +382,38 @@ export default function CartScreen() {
   // ── Coupon handlers ──
   const handleApplyCoupon = useCallback(async () => {
     const code = couponCode.trim().toUpperCase();
+    console.log('[COUPON] Applying code:', code);
     if (!code) return;
     setCouponStatus('loading');
     try {
-      // TODO: Replace with real API call → POST /coupons/validate { code, subtotal }
-      // For now, simulate a backend call
-      await new Promise(r => setTimeout(r, 800));
+      const { validateCoupon } = await import('../services/coupon.api');
+      console.log('[COUPON] Calling POST /coupon/validate with code:', code);
+      const coupon = await validateCoupon(code);
+      console.log('[COUPON] Validate response:', JSON.stringify(coupon));
 
-      // Example hardcoded coupons (replace with backend response)
-      if (code === 'TCBT10') {
-        const disc = Math.round(subtotal * 0.10);
-        setCouponDiscount(disc);
-        setCouponMessage(`10% off applied! You save ₹${disc}`);
-        setCouponStatus('applied');
-      } else if (code === 'FLAT50') {
-        setCouponDiscount(50);
-        setCouponMessage('Flat ₹50 off applied!');
-        setCouponStatus('applied');
+      // Calculate discount based on coupon type
+      let disc = 0;
+      if (coupon.type === 'percent') {
+        disc = Math.round((subtotal * coupon.value) / 100);
       } else {
-        setCouponDiscount(0);
-        setCouponMessage('Invalid coupon code');
-        setCouponStatus('error');
+        disc = coupon.value;
       }
+      console.log('[COUPON] Type:', coupon.type, '| Value:', coupon.value, '| Subtotal:', subtotal, '| Discount:', disc, '| CouponId:', coupon._id);
+
+      setCouponId(coupon._id);
+      setCouponDiscount(disc);
+      setCouponCode(coupon.name);
+      setCouponMessage(
+        coupon.type === 'percent'
+          ? `${coupon.value}% off applied! You save ₹${disc}`
+          : `Flat ₹${disc} off applied!`
+      );
+      setCouponStatus('applied');
     } catch (err: any) {
+      console.error('[COUPON] Validation failed:', err?.message || err);
+      setCouponId(null);
       setCouponDiscount(0);
-      setCouponMessage(err?.message || 'Could not validate coupon');
+      setCouponMessage(err?.message || 'Invalid coupon code');
       setCouponStatus('error');
     }
   }, [couponCode, subtotal]);
@@ -401,6 +423,7 @@ export default function CartScreen() {
     setCouponDiscount(0);
     setCouponMessage('');
     setCouponStatus('idle');
+    setCouponId(null);
   }, []);
 
   // ── Sync selected address into orderSlice whenever it changes ──────────────
@@ -495,7 +518,7 @@ export default function CartScreen() {
 
       let result;
       try {
-        result = await submitOrderAsync(addressId);
+        result = await submitOrderAsync(addressId, couponId || undefined);
       } catch (orderErr: any) {
         console.error('[CHECKOUT] submitOrderAsync threw:', orderErr);
         console.error('[CHECKOUT] Error type:', typeof orderErr);
@@ -767,8 +790,8 @@ export default function CartScreen() {
                     .filter(Boolean)
                     .join(", ")}
                 </Text>
-                {userPhone ? (
-                  <Text style={styles.addressPhone}>📞 {userPhone}</Text>
+                {(selectedAddress?.receiver_phone || userPhone) ? (
+                  <Text style={styles.addressPhone}>📞 {selectedAddress?.receiver_phone || userPhone}</Text>
                 ) : null}
               </View>
             )}
