@@ -733,11 +733,11 @@ export default function CartScreen() {
                 <Text style={styles.billValue}>₹{subtotal}</Text>
               </View>
 
-              <View style={styles.billRow}>
-                <View>
+              <View style={[styles.billRow, { alignItems: 'flex-start' }]}>
+                <View style={{ flex: 1, marginRight: 12 }}>
                   <Text style={styles.billLabel}>Delivery charge</Text>
                   {shipping.status === 'success' && shipping.data.courier ? (
-                    <Text style={styles.courierTag}>
+                    <Text style={styles.courierTag} numberOfLines={2}>
                       {shipping.data.courier} · {shipping.data.estimatedDelivery}
                     </Text>
                   ) : null}

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "client",
+    "name": "TCBT",
     "slug": "client",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.client"
+      "package": "com.tcbt.myapp"
     },
     "web": {
       "output": "static",
