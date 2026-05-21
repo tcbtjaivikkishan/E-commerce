@@ -66,7 +66,7 @@ export default function AddressScreen() {
           {/* Form Card */}
           <View className="mx-4 mt-4 bg-white rounded-2xl p-6" style={{ elevation: 2 }}>
             <Text className="text-[13px] font-bold text-[#888] uppercase tracking-widest mb-6">
-              Delivery Details
+              Delivery Detail
             </Text>
 
             {/* Name */}
