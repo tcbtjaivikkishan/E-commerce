@@ -16,7 +16,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../cart/hooks/useCart";
+import VariantPickerModal from "../components/VariantPickerModal";
 import { fetchProductById, fetchAllProducts } from "../services/product.api";
+import { getProductVariants, hasProductVariants } from "../utils/productVariants";
 
 const { width } = Dimensions.get("window");
 
@@ -42,11 +44,13 @@ function QtyControl({
   onAdd,
   onRemove,
   small = false,
+  optionsCount = 0,
 }: {
   qty: number;
   onAdd: () => void;
   onRemove: () => void;
   small?: boolean;
+  optionsCount?: number;
 }) {
   if (qty === 0) {
     return (
@@ -58,6 +62,11 @@ function QtyControl({
         <Text style={[styles.addBtnText, small && styles.addBtnTextSmall]}>
           ADD
         </Text>
+        {optionsCount > 1 && (
+          <Text style={[styles.optionsText, small && styles.optionsTextSmall]}>
+            {optionsCount} options
+          </Text>
+        )}
       </TouchableOpacity>
     );
   }
@@ -97,6 +106,7 @@ export default function ProductScreen() {
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const [variantProduct, setVariantProduct] = useState<any | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -162,6 +172,14 @@ export default function ProductScreen() {
   const imageUrl = getImageUrl(product);
   const qty = getQty(productId);
   const price = getProductPrice(product);
+  const variantCount = getProductVariants(product).length;
+  const openVariantPicker = (item: any) => {
+    if (hasProductVariants(item)) {
+      setVariantProduct(item);
+      return true;
+    }
+    return false;
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -243,8 +261,11 @@ export default function ProductScreen() {
 
             <QtyControl
               qty={qty}
-              onAdd={() => add(productId)}
+              onAdd={() => {
+                if (!openVariantPicker(product)) add(productId);
+              }}
               onRemove={() => remove(productId)}
+              optionsCount={variantCount}
             />
           </View>
         </View>
@@ -275,8 +296,11 @@ export default function ProductScreen() {
                     <View style={styles.productBottom}>
                       <QtyControl
                         qty={itemQty}
-                        onAdd={() => add(itemId)}
+                        onAdd={() => {
+                          if (!openVariantPicker(item)) add(itemId);
+                        }}
                         onRemove={() => remove(itemId)}
+                        optionsCount={getProductVariants(item).length}
                         small
                       />
                     </View>
@@ -298,7 +322,9 @@ export default function ProductScreen() {
 
         <TouchableOpacity
           style={[styles.addToCart, qty > 0 && styles.addToCartActive]}
-          onPress={() => add(productId)}
+          onPress={() => {
+            if (!openVariantPicker(product)) add(productId);
+          }}
           activeOpacity={0.85}
         >
           {qty > 0 ? (
@@ -312,6 +338,14 @@ export default function ProductScreen() {
           )}
         </TouchableOpacity>
       </View>
+      <VariantPickerModal
+        visible={!!variantProduct}
+        product={variantProduct}
+        getQty={getQty}
+        onAdd={add}
+        onRemove={remove}
+        onClose={() => setVariantProduct(null)}
+      />
       </View>
     </SafeAreaView>
   );
@@ -537,14 +571,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: GREEN,
     borderRadius: 8,
-    paddingVertical: 7,
+    minHeight: 42,
+    paddingVertical: 5,
     paddingHorizontal: 18,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#fff",
   },
 
   addBtnSmall: {
-    paddingVertical: 4,
+    minHeight: 36,
+    paddingVertical: 3,
     paddingHorizontal: 10,
     borderRadius: 6,
   },
@@ -557,6 +594,18 @@ const styles = StyleSheet.create({
 
   addBtnTextSmall: {
     fontSize: 11,
+  },
+
+  optionsText: {
+    color: GREEN,
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: "500",
+  },
+
+  optionsTextSmall: {
+    fontSize: 8,
+    lineHeight: 10,
   },
 
   qtyRow: {

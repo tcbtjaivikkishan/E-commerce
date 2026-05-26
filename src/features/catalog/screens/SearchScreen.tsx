@@ -15,12 +15,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCart } from "../../cart/hooks/useCart";
+import VariantPickerModal from "../components/VariantPickerModal";
 import { useWishlist } from "../hooks/useWishlist";
 import {
   fetchAllProducts,
   getCachedProducts,
   type ApiProductResponse,
 } from "../services/product.api";
+import { getProductVariants, hasProductVariants } from "../utils/productVariants";
 
 const normalizeSearchText = (value: unknown) =>
   String(value || "")
@@ -51,6 +53,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(!hasCachedProducts);
   const [error, setError] = useState<string | null>(null);
+  const [variantProduct, setVariantProduct] = useState<any | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 250);
@@ -96,6 +99,14 @@ export default function SearchScreen() {
   }, []);
 
   const getPrice = useCallback((p: any) => p.price || p.rate || 0, []);
+
+  const handleAddPress = useCallback((product: any) => {
+    if (hasProductVariants(product)) {
+      setVariantProduct(product);
+      return;
+    }
+    add(getId(product));
+  }, [add, getId]);
 
   const results = useMemo(() => {
     return products.filter((product) => matchesSearchTerm(product, query));
@@ -183,6 +194,7 @@ export default function SearchScreen() {
                 add={add}
                 remove={remove}
                 getQty={getQty}
+                onAddPress={handleAddPress}
                 toggle={toggle}
                 isWishlisted={isWishlisted}
                 getId={getId}
@@ -193,6 +205,15 @@ export default function SearchScreen() {
           )}
         />
       )}
+
+      <VariantPickerModal
+        visible={!!variantProduct}
+        product={variantProduct}
+        getQty={getQty}
+        onAdd={add}
+        onRemove={remove}
+        onClose={() => setVariantProduct(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -202,6 +223,7 @@ function SearchProductCard({
   add,
   remove,
   getQty,
+  onAddPress,
   toggle,
   isWishlisted,
   getId,
@@ -212,6 +234,8 @@ function SearchProductCard({
   const image = getImage(product);
   const price = getPrice(product);
   const qty = getQty(id);
+  const variantCount = getProductVariants(product).length;
+  const hasVariants = variantCount > 1;
 
   return (
     <TouchableOpacity
@@ -251,10 +275,13 @@ function SearchProductCard({
             style={styles.addBtn}
             onPress={(e) => {
               e.stopPropagation();
-              add(id);
+              onAddPress(product);
             }}
           >
             <Text style={styles.addText}>ADD</Text>
+            {hasVariants && (
+              <Text style={styles.optionsText}>{variantCount} options</Text>
+            )}
           </TouchableOpacity>
         ) : (
           <View style={styles.stepper}>
@@ -426,14 +453,22 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#196F1B",
     borderRadius: 6,
-    paddingVertical: 4,
+    minHeight: 38,
+    paddingVertical: 3,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#fff",
   },
   addText: {
     color: "#196F1B",
     fontWeight: "700",
     fontSize: 11,
+  },
+  optionsText: {
+    color: "#196F1B",
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: "500",
   },
   stepper: {
     flexDirection: "row",

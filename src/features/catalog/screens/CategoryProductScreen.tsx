@@ -19,6 +19,8 @@ import {
 } from "../services/product.api";
 
 import { useCart } from "@/src/features/cart/hooks/useCart";
+import VariantPickerModal from "../components/VariantPickerModal";
+import { getProductVariants, hasProductVariants } from "../utils/productVariants";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 42) / 2;
@@ -37,15 +39,20 @@ function QtyControl({
   qty,
   onAdd,
   onRemove,
+  optionsCount = 0,
 }: {
   qty: number;
   onAdd: () => void;
   onRemove: () => void;
+  optionsCount?: number;
 }) {
   if (qty === 0) {
     return (
       <TouchableOpacity style={styles.addBtn} onPress={onAdd}>
         <Text style={styles.addBtnText}>ADD</Text>
+        {optionsCount > 1 && (
+          <Text style={styles.optionsText}>{optionsCount} options</Text>
+        )}
       </TouchableOpacity>
     );
   }
@@ -66,12 +73,16 @@ function QtyControl({
 }
 
 // ─── Product Card ──────────────────────────────────
-const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
+const ProductCard: React.FC<{
+  item: ApiProductResponse;
+  onVariantPress: (product: ApiProductResponse) => void;
+}> = ({ item, onVariantPress }) => {
   const { add, remove, getQty } = useCart();
 
   const productId = getProductId(item);
   const qty = getQty(productId);
   const imageUrl = getImageUrl(item);
+  const variantCount = getProductVariants(item).length;
 
   const [wishlisted, setWishlisted] = useState(false);
 
@@ -117,8 +128,15 @@ const ProductCard: React.FC<{ item: ApiProductResponse }> = ({ item }) => {
 
           <QtyControl
             qty={qty}
-            onAdd={() => add(productId)}
+            onAdd={() => {
+              if (hasProductVariants(item)) {
+                onVariantPress(item);
+              } else {
+                add(productId);
+              }
+            }}
             onRemove={() => remove(productId)}
+            optionsCount={variantCount}
           />
         </View>
       </View>
@@ -136,10 +154,16 @@ export default function CategoryProductsScreen() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [variantProduct, setVariantProduct] = useState<ApiProductResponse | null>(null);
+  const { add, remove, getQty } = useCart();
 
   const loadProducts = async (pageNumber = 1, append = false) => {
     try {
-      append ? setLoadingMore(true) : setLoading(true);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
 
       const res = await fetchFilteredProducts({
         page: pageNumber,
@@ -210,12 +234,23 @@ export default function CategoryProductsScreen() {
         contentContainerStyle={{ padding: 14, gap: 12 }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        renderItem={({ item }) => <ProductCard item={item} />}
+        renderItem={({ item }) => (
+          <ProductCard item={item} onVariantPress={setVariantProduct} />
+        )}
         ListFooterComponent={
           loadingMore ? (
             <ActivityIndicator style={{ marginVertical: 20 }} />
           ) : null
         }
+      />
+
+      <VariantPickerModal
+        visible={!!variantProduct}
+        product={variantProduct}
+        getQty={getQty}
+        onAdd={add}
+        onRemove={remove}
+        onClose={() => setVariantProduct(null)}
       />
     </View>
   );
@@ -312,10 +347,19 @@ const styles = StyleSheet.create({
     borderColor: "#0F7B3C",
     borderRadius: 6,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    minHeight: 38,
+    paddingVertical: 3,
+    alignItems: "center",
+    justifyContent: "center",
   },
   addBtnText: {
     color: "#0F7B3C",
     fontWeight: "700",
+  },
+  optionsText: {
+    color: "#0F7B3C",
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: "500",
   },
 });

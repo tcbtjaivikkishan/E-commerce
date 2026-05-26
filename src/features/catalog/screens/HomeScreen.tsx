@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,13 +12,16 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import BannerCarousel from "../../../shared/components/BannerCarousel";
 import Header from "../../../shared/components/Header";
 import { useCart } from "../../cart/hooks/useCart";
+import VariantPickerModal from "../components/VariantPickerModal";
 import { useWishlist } from "../hooks/useWishlist";
-import { fetchAllProducts, type ApiProductResponse } from "../services/product.api";
+import { fetchAllProducts, fetchProductById, type ApiProductResponse } from "../services/product.api";
+import { getProductVariants, hasProductVariants } from "../utils/productVariants";
+
+const resolveProductId = (p: any) => p?._id || p?.zoho_item_id || p?.item_id || p?.id;
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
@@ -28,6 +31,8 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<ApiProductResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [variantProduct, setVariantProduct] = useState<any | null>(null);
+  const productDetailCache = useRef<Record<string, any>>({});
 
   // Fetch products from API
   useEffect(() => {
@@ -37,8 +42,47 @@ export default function HomeScreen() {
         setLoading(true);
         const data = await fetchAllProducts();
         if (mounted) {
-          setProducts(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setProducts(list);
           setError(null);
+
+          (async () => {
+            const enrichedProducts: Record<string, any> = {};
+            const batchSize = 4;
+
+            for (let i = 0; i < list.length; i += batchSize) {
+              const batch = list.slice(i, i + batchSize);
+              const details = await Promise.all(
+                batch.map(async (item: any) => {
+                  const id = resolveProductId(item);
+                  if (!id) return null;
+                  if (productDetailCache.current[id]) return productDetailCache.current[id];
+
+                  try {
+                    const detail = await fetchProductById(id);
+                    productDetailCache.current[id] = detail;
+                    return detail;
+                  } catch {
+                    return null;
+                  }
+                })
+              );
+
+              details.forEach((detail) => {
+                const id = resolveProductId(detail);
+                if (id && hasProductVariants(detail)) enrichedProducts[id] = detail;
+              });
+            }
+
+            if (mounted && Object.keys(enrichedProducts).length > 0) {
+              setProducts((prev) =>
+                prev.map((item: any) => {
+                  const id = resolveProductId(item);
+                  return enrichedProducts[id] ? { ...item, ...enrichedProducts[id] } : item;
+                })
+              );
+            }
+          })();
         }
       } catch (err: any) {
         if (mounted) {
@@ -57,7 +101,7 @@ export default function HomeScreen() {
   const CARD_WIDTH = (width - 16 - 10 * 3) / 3.15;
 
   // Helper to get product identifier (supports both API and JSON shapes)
-  const getId = useCallback((p: any) => p._id || p.zoho_item_id || p.item_id, []);
+  const getId = useCallback((p: any) => resolveProductId(p), []);
 
   // Helper to get image URL
   const getImage = useCallback((p: any) => {
@@ -75,6 +119,37 @@ export default function HomeScreen() {
 
   // Helper to get price
   const getPrice = useCallback((p: any) => p.price || p.rate || 0, []);
+
+  const handleAddPress = useCallback(async (product: any) => {
+    if (hasProductVariants(product)) {
+      setVariantProduct(product);
+      return;
+    }
+
+    const id = getId(product);
+    if (!id) return;
+
+    const cachedDetail = productDetailCache.current[id];
+    if (cachedDetail && hasProductVariants(cachedDetail)) {
+      setVariantProduct({ ...product, ...cachedDetail });
+      return;
+    }
+
+    try {
+      const detail = await fetchProductById(id);
+      productDetailCache.current[id] = detail;
+      if (hasProductVariants(detail)) {
+        const enrichedProduct = { ...product, ...detail };
+        setProducts((prev) =>
+          prev.map((item: any) => (getId(item) === id ? enrichedProduct : item))
+        );
+        setVariantProduct(enrichedProduct);
+        return;
+      }
+    } catch {}
+
+    add(id);
+  }, [add, getId]);
 
   if (loading) {
     return (
@@ -149,6 +224,7 @@ export default function HomeScreen() {
               add={add}
               remove={remove}
               getQty={getQty}
+              onAddPress={handleAddPress}
               toggle={toggle}
               isWishlisted={isWishlisted}
               cardWidth={CARD_WIDTH}
@@ -173,6 +249,7 @@ export default function HomeScreen() {
               add={add}
               remove={remove}
               getQty={getQty}
+              onAddPress={handleAddPress}
               toggle={toggle}
               isWishlisted={isWishlisted}
               cardWidth={CARD_WIDTH}
@@ -200,6 +277,7 @@ export default function HomeScreen() {
                 add={add}
                 remove={remove}
                 getQty={getQty}
+                onAddPress={handleAddPress}
                 toggle={toggle}
                 isWishlisted={isWishlisted}
                 cardWidth={undefined}
@@ -211,6 +289,15 @@ export default function HomeScreen() {
           )}
         />
       </ScrollView>
+
+      <VariantPickerModal
+        visible={!!variantProduct}
+        product={variantProduct}
+        getQty={getQty}
+        onAdd={add}
+        onRemove={remove}
+        onClose={() => setVariantProduct(null)}
+      />
     </View>
   );
 }
@@ -221,6 +308,7 @@ const ProductCard = React.memo(function ProductCard({
   add,
   remove,
   getQty,
+  onAddPress,
   toggle,
   isWishlisted,
   cardWidth,
@@ -231,6 +319,8 @@ const ProductCard = React.memo(function ProductCard({
   const id = getId(p);
   const image = getImage(p);
   const price = getPrice(p);
+  const variantCount = getProductVariants(p).length;
+  const hasVariants = variantCount > 1;
 
   const qty = getQty(id);
   const imgSize = cardWidth ? cardWidth - 16 : undefined;
@@ -292,10 +382,13 @@ const ProductCard = React.memo(function ProductCard({
             style={styles.addBtn}
             onPress={(e) => {
               e.stopPropagation();
-              add(id);
+              onAddPress(p);
             }}
           >
             <Text style={styles.addText}>ADD</Text>
+            {hasVariants && (
+              <Text style={styles.optionsText}>{variantCount} options</Text>
+            )}
           </TouchableOpacity>
         ) : (
           <View style={styles.stepper}>
@@ -313,11 +406,11 @@ const ProductCard = React.memo(function ProductCard({
 
             <TouchableOpacity
               style={styles.stepTouch}
-              onPress={(e) => {
-                e.stopPropagation();
-                add(id);
-              }}
-            >
+            onPress={(e) => {
+              e.stopPropagation();
+              add(id);
+            }}
+          >
               <Text style={styles.stepText}>+</Text>
             </TouchableOpacity>
           </View>
@@ -467,8 +560,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#196F1B",
     borderRadius: 6,
-    paddingVertical: 4,
+    minHeight: 38,
+    paddingVertical: 3,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#fff",
   },
 
@@ -476,6 +571,12 @@ const styles = StyleSheet.create({
     color: "#196F1B",
     fontWeight: "700",
     fontSize: 11,
+  },
+  optionsText: {
+    color: "#196F1B",
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: "500",
   },
 
   stepper: {
