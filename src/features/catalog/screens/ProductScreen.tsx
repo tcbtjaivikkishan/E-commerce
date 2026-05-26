@@ -18,7 +18,7 @@ import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../cart/hooks/useCart";
 import VariantPickerModal from "../components/VariantPickerModal";
 import { fetchProductById, fetchAllProducts } from "../services/product.api";
-import { getProductVariants, hasProductVariants } from "../utils/productVariants";
+import { getProductVariants, getVariantCartSummary, hasProductVariants } from "../utils/productVariants";
 
 const { width } = Dimensions.get("window");
 
@@ -170,9 +170,11 @@ export default function ProductScreen() {
 
   const productId = getProductId(product);
   const imageUrl = getImageUrl(product);
-  const qty = getQty(productId);
   const price = getProductPrice(product);
   const variantCount = getProductVariants(product).length;
+  const hasVariants = variantCount > 1;
+  const variantCart = hasVariants ? getVariantCartSummary(product, getQty) : null;
+  const qty = hasVariants ? variantCart?.totalQty ?? 0 : getQty(productId);
   const openVariantPicker = (item: any) => {
     if (hasProductVariants(item)) {
       setVariantProduct(item);
@@ -264,7 +266,7 @@ export default function ProductScreen() {
               onAdd={() => {
                 if (!openVariantPicker(product)) add(productId);
               }}
-              onRemove={() => remove(productId)}
+              onRemove={() => remove(hasVariants && variantCart?.firstCartId ? variantCart.firstCartId : productId)}
               optionsCount={variantCount}
             />
           </View>
@@ -278,7 +280,10 @@ export default function ProductScreen() {
               {similarProducts.map((item: any) => {
                 const img = getImageUrl(item);
                 const itemId = getProductId(item);
-                const itemQty = getQty(itemId);
+                const itemVariantCount = getProductVariants(item).length;
+                const itemHasVariants = itemVariantCount > 1;
+                const itemVariantCart = itemHasVariants ? getVariantCartSummary(item, getQty) : null;
+                const itemQty = itemHasVariants ? itemVariantCart?.totalQty ?? 0 : getQty(itemId);
 
                 return (
                   <TouchableOpacity
@@ -299,8 +304,8 @@ export default function ProductScreen() {
                         onAdd={() => {
                           if (!openVariantPicker(item)) add(itemId);
                         }}
-                        onRemove={() => remove(itemId)}
-                        optionsCount={getProductVariants(item).length}
+                        onRemove={() => remove(itemHasVariants && itemVariantCart?.firstCartId ? itemVariantCart.firstCartId : itemId)}
+                        optionsCount={itemVariantCount}
                         small
                       />
                     </View>
@@ -330,8 +335,10 @@ export default function ProductScreen() {
           {qty > 0 ? (
             <QtyControl
               qty={qty}
-              onAdd={() => add(productId)}
-              onRemove={() => remove(productId)}
+              onAdd={() => {
+                if (!openVariantPicker(product)) add(productId);
+              }}
+              onRemove={() => remove(hasVariants && variantCart?.firstCartId ? variantCart.firstCartId : productId)}
             />
           ) : (
             <Text style={styles.addText}>Add to Cart</Text>

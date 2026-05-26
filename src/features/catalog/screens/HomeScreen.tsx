@@ -19,7 +19,7 @@ import { useCart } from "../../cart/hooks/useCart";
 import VariantPickerModal from "../components/VariantPickerModal";
 import { useWishlist } from "../hooks/useWishlist";
 import { fetchAllProducts, fetchProductById, type ApiProductResponse } from "../services/product.api";
-import { getProductVariants, hasProductVariants } from "../utils/productVariants";
+import { getProductVariants, getVariantCartSummary, hasProductVariants } from "../utils/productVariants";
 
 const resolveProductId = (p: any) => p?._id || p?.zoho_item_id || p?.item_id || p?.id;
 
@@ -321,8 +321,9 @@ const ProductCard = React.memo(function ProductCard({
   const price = getPrice(p);
   const variantCount = getProductVariants(p).length;
   const hasVariants = variantCount > 1;
+  const variantCart = hasVariants ? getVariantCartSummary(p, getQty) : null;
 
-  const qty = getQty(id);
+  const qty = hasVariants ? variantCart?.totalQty ?? 0 : getQty(id);
   const imgSize = cardWidth ? cardWidth - 16 : undefined;
 
   return (
@@ -396,7 +397,7 @@ const ProductCard = React.memo(function ProductCard({
               style={styles.stepTouch}
               onPress={(e) => {
                 e.stopPropagation();
-                remove(id);
+                remove(hasVariants && variantCart?.firstCartId ? variantCart.firstCartId : id);
               }}
             >
               <Text style={styles.stepText}>−</Text>
@@ -406,11 +407,15 @@ const ProductCard = React.memo(function ProductCard({
 
             <TouchableOpacity
               style={styles.stepTouch}
-            onPress={(e) => {
-              e.stopPropagation();
-              add(id);
-            }}
-          >
+              onPress={(e) => {
+                e.stopPropagation();
+                if (hasVariants) {
+                  onAddPress(p);
+                } else {
+                  add(id);
+                }
+              }}
+            >
               <Text style={styles.stepText}>+</Text>
             </TouchableOpacity>
           </View>

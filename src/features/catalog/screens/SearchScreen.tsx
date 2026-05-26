@@ -22,7 +22,7 @@ import {
   getCachedProducts,
   type ApiProductResponse,
 } from "../services/product.api";
-import { getProductVariants, hasProductVariants } from "../utils/productVariants";
+import { getProductVariants, getVariantCartSummary, hasProductVariants } from "../utils/productVariants";
 
 const normalizeSearchText = (value: unknown) =>
   String(value || "")
@@ -233,9 +233,10 @@ function SearchProductCard({
   const id = getId(product);
   const image = getImage(product);
   const price = getPrice(product);
-  const qty = getQty(id);
   const variantCount = getProductVariants(product).length;
   const hasVariants = variantCount > 1;
+  const variantCart = hasVariants ? getVariantCartSummary(product, getQty) : null;
+  const qty = hasVariants ? variantCart?.totalQty ?? 0 : getQty(id);
 
   return (
     <TouchableOpacity
@@ -289,7 +290,7 @@ function SearchProductCard({
               style={styles.stepTouch}
               onPress={(e) => {
                 e.stopPropagation();
-                remove(id);
+                remove(hasVariants && variantCart?.firstCartId ? variantCart.firstCartId : id);
               }}
             >
               <Text style={styles.stepText}>-</Text>
@@ -301,7 +302,11 @@ function SearchProductCard({
               style={styles.stepTouch}
               onPress={(e) => {
                 e.stopPropagation();
-                add(id);
+                if (hasVariants) {
+                  onAddPress(product);
+                } else {
+                  add(id);
+                }
               }}
             >
               <Text style={styles.stepText}>+</Text>

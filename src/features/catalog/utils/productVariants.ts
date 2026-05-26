@@ -125,3 +125,20 @@ export const getProductVariants = (product: any): ProductVariantOption[] => {
 export const hasProductVariants = (product: any) => getProductVariants(product).length > 1;
 
 export const getProductCartId = (product: any) => getProductId(product);
+
+export const getVariantCartSummary = (
+  product: any,
+  getQty: (id: string) => number
+) => {
+  const variants = getProductVariants(product);
+  let totalQty = 0;
+  let firstCartId = "";
+
+  for (const variant of variants) {
+    const qty = getQty(variant.cartId);
+    if (qty > 0 && !firstCartId) firstCartId = variant.cartId;
+    totalQty += qty;
+  }
+
+  return { totalQty, firstCartId };
+};

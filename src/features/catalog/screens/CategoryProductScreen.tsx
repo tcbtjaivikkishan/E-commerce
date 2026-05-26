@@ -20,7 +20,7 @@ import {
 
 import { useCart } from "@/src/features/cart/hooks/useCart";
 import VariantPickerModal from "../components/VariantPickerModal";
-import { getProductVariants, hasProductVariants } from "../utils/productVariants";
+import { getProductVariants, getVariantCartSummary } from "../utils/productVariants";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 42) / 2;
@@ -80,9 +80,11 @@ const ProductCard: React.FC<{
   const { add, remove, getQty } = useCart();
 
   const productId = getProductId(item);
-  const qty = getQty(productId);
   const imageUrl = getImageUrl(item);
   const variantCount = getProductVariants(item).length;
+  const hasVariants = variantCount > 1;
+  const variantCart = hasVariants ? getVariantCartSummary(item, getQty) : null;
+  const qty = hasVariants ? variantCart?.totalQty ?? 0 : getQty(productId);
 
   const [wishlisted, setWishlisted] = useState(false);
 
@@ -129,13 +131,13 @@ const ProductCard: React.FC<{
           <QtyControl
             qty={qty}
             onAdd={() => {
-              if (hasProductVariants(item)) {
+              if (hasVariants) {
                 onVariantPress(item);
               } else {
                 add(productId);
               }
             }}
-            onRemove={() => remove(productId)}
+            onRemove={() => remove(hasVariants && variantCart?.firstCartId ? variantCart.firstCartId : productId)}
             optionsCount={variantCount}
           />
         </View>
