@@ -3,7 +3,7 @@
 
 export const AppConfig = {
   /** App metadata */
-  APP_NAME: "Jaivik Mart",
+  APP_NAME: "TCBT",
   APP_VERSION: "1.0.0",
   APP_SLUG: "client",
 

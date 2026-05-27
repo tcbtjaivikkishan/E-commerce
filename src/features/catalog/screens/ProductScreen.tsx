@@ -139,7 +139,7 @@ export default function ProductScreen() {
     try {
       await Share.share({
         title: product?.name,
-        message: `Check out ${product?.name} on Jaivik Mart!\n\nPrice: ₹${product?.price || 0}\n\nShop fresh & organic products at Jaivik Mart.`,
+        message: `Check out ${product?.name} on TCBT Mart!\n\nPrice: ₹${product?.price || 0}\n\nShop fresh & organic products at TCBT Mart.`,
         url: getImageUrl(product),
       });
     } catch (e) {}

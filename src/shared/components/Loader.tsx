@@ -197,7 +197,7 @@ export default function Loader() {
 
       {/* ── Brand label ── */}
       <Animated.View style={[s.labelWrap, { opacity: labelOp }]}>
-        <Text style={s.label}>Jaivik Mart</Text>
+        <Text style={s.label}>TCBT</Text>
         <View style={s.dotsRow}>
           {trail.map((t, i) => (
             <Animated.View key={i} style={[s.dot, { opacity: t }]} />

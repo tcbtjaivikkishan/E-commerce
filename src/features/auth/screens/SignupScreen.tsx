@@ -182,7 +182,7 @@ export default function SignupScreen() {
           <View style={S.logoBox}>
             <LeafLogo/>
           </View>
-          <Text style={S.brand}>Jaivik Mart</Text>
+          <Text style={S.brand}>TCBT</Text>
           <Text style={S.sub}>Join thousands of healthy shoppers</Text>
         </View>
 

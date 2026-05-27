@@ -176,7 +176,7 @@ export default function SplashScreen() {
             textAlign: "center",
           }}
         >
-          Jaivik Mart
+          TCBT
         </Text>
         <View
           style={{

@@ -40,7 +40,7 @@ export default function ProfileScreen() {
     try {
       await Share.share({
         message:
-          "Check out Jaivik Mart — Natural farming products! Download now: https://play.google.com/store/apps/details?id=com.tcbt.jaivikmart",
+          "Check out TCBT — Natural farming products! Download now: https://play.google.com/store/apps/details?id=com.tcbt.myapp",
       });
     } catch (_) { }
   }, []);

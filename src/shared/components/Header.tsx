@@ -47,8 +47,8 @@ export default function Header({
       {/* ── Row 1: Brand + Profile ── */}
       <View style={styles.topRow}>
         <View style={styles.brandBlock}>
-          <Text style={styles.brandName}>Jaivik Mart</Text>
-          <Text style={styles.deliveryTime}>3-5 days</Text>
+          <Text style={styles.brandName}>TCBT</Text>
+          <Text style={styles.deliveryTime}>3-5 days delivery</Text>
           <View style={styles.locationRow}>
             <Text style={styles.homeText}>Fully</Text>
             <Text style={styles.locationSep}> – </Text>
