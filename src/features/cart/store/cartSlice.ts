@@ -123,6 +123,11 @@ export const cartSlice = createSlice({
       const id = String(action.payload);
       state.items[id] = (state.items[id] ?? 0) + 1;
     },
+    /** Store product details for optimistic cart rows */
+    upsertProductData(state, action: PayloadAction<CartProduct>) {
+      const product = action.payload;
+      state.productData[product.id] = product;
+    },
     /** Optimistic remove (decrement by 1) */
     removeItem(state, action: PayloadAction<string>) {
       const id = String(action.payload);
@@ -180,7 +185,7 @@ export const cartSlice = createSlice({
   },
 });
 
-export const { addItem, removeItem, clearItem, clearCart } = cartSlice.actions;
+export const { addItem, upsertProductData, removeItem, clearItem, clearCart } = cartSlice.actions;
 export default cartSlice.reducer;
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
