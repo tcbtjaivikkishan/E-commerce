@@ -33,6 +33,7 @@ import {
   selectCartItems,
   selectCartProducts,
   selectSubtotal,
+  syncCart,
   updateItemAsync,
 } from "../store/cartSlice";
 
@@ -322,6 +323,11 @@ export default function CartScreen() {
   const userAddresses = useAppSelector((state) => state.user.addresses) || [];
 
   const isEmpty = cartItems.length === 0;
+
+  // Sync cart from server on mount
+  useEffect(() => {
+    dispatch(syncCart());
+  }, [dispatch]);
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [selectedAddressIdx, setSelectedAddressIdx] = useState(0);

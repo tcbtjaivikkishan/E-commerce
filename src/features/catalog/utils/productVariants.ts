@@ -52,6 +52,15 @@ export const getProductPrice = (product: any) =>
   firstNumber(product?.price, product?.rate, product?.priceRaw, product?.selling_price);
 
 export const getProductUnit = (product: any) => {
+  // Check variant attributes first (from Zoho: { "Weight": "500ml" })
+  const attrs = product?.attributes;
+  if (attrs && typeof attrs === "object" && !Array.isArray(attrs)) {
+    const attrVal = Object.values(attrs).find(
+      (v) => typeof v === "string" && v.trim()
+    );
+    if (attrVal) return (attrVal as string).trim();
+  }
+
   const direct = firstString(
     product?.unit,
     product?.weight_with_unit,
