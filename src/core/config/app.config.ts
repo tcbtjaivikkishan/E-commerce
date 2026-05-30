@@ -8,7 +8,7 @@ export const AppConfig = {
   APP_SLUG: "client",
 
   /** API configuration — swap per environment */
-  API_BASE_URL: "https://iatrogenic-claribel-unwillfully.ngrok-free.dev",
+  API_BASE_URL: "https://api.tcbtjaivikkisan.com",
   CDN_BASE_URL: "https://cdn2.zohoecommerce.com",
   STOREFRONT_DOMAIN: "products.tcbtjaivikkisan.com",
 
@@ -17,6 +17,7 @@ export const AppConfig = {
   ZOHO_PAYMENTS_ACCOUNT_ID: "60046963789",
   ZOHO_PAYMENTS_REGION: "india" as "india" | "us",
   ZOHO_PAYMENTS_MODE: "live" as "sandbox" | "live",  // must match backend mode
+
 
   /** Feature flags */
   FEATURES: {
