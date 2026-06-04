@@ -4,7 +4,7 @@
 export const AppConfig = {
   /** App metadata */
   APP_NAME: "TCBT",
-  APP_VERSION: "1.0.0",
+  APP_VERSION: "2.0.0",
   APP_SLUG: "client",
 
   /** API configuration — swap per environment */
@@ -12,7 +12,12 @@ export const AppConfig = {
   CDN_BASE_URL: "https://cdn2.zohoecommerce.com",
   STOREFRONT_DOMAIN: "products.tcbtjaivikkisan.com",
 
-  /** Zoho Payments SDK — get from Zoho Payments → Developer Space → API Keys */
+  /**
+   * Zoho Payments SDK — publishable key for client-side payment session initialization.
+   * ⚠️ SECURITY: Verify with Zoho that this is a publishable (client-safe) key.
+   *    If it is a SECRET key, move it server-side immediately and rotate it.
+   *    Get keys from: Zoho Payments → Developer Space → API Keys
+   */
   ZOHO_PAYMENTS_API_KEY: "1003.485e2c1d68446d56454c02890412c4f6.3a68857c5822f34d8df8828ec7557455",
   ZOHO_PAYMENTS_ACCOUNT_ID: "60046963789",
   ZOHO_PAYMENTS_REGION: "india" as "india" | "us",

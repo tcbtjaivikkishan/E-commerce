@@ -2,7 +2,7 @@
   "expo": {
     "name": "TCBT",
     "slug": "client",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "client",
@@ -20,7 +20,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.tcbt.myapp"
+      "package": "com.tcbt.myapp",
+      "versionCode": 2
     },
     "web": {
       "output": "static",

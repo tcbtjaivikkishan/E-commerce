@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { C } from "../../../core/theme";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
-import { logoutUser } from "../../auth/services/auth.service";
 import { RESET_APP } from "../../../store/resetAction";
+import { logoutUser } from "../../auth/services/auth.service";
 import { updateProfile } from "../../auth/store/userSlice";
 import { updateUserProfile } from "../services/user.api";
 
@@ -270,7 +270,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <Text style={styles.version}>App Version 1.0.0</Text>
+        <Text style={styles.version}>App Version 2.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
