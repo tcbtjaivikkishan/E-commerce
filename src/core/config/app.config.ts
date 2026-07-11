@@ -9,6 +9,7 @@ export const AppConfig = {
 
   /** API configuration — swap per environment */
   API_BASE_URL: "https://api.tcbtjaivikkisan.com",
+  WEB_DEV_API_PROXY_URL: "http://localhost:3000",
   CDN_BASE_URL: "https://cdn2.zohoecommerce.com",
   STOREFRONT_DOMAIN: "products.tcbtjaivikkisan.com",
 

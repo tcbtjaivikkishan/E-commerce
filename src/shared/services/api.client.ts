@@ -1,5 +1,6 @@
 // src/shared/services/api.client.ts
 // ─── HTTP client with JWT auth, token refresh, and error handling ────────────
+import { Platform } from "react-native";
 import { AppConfig } from "../../core/config";
 import {
   getAccessToken,
@@ -9,7 +10,10 @@ import {
   clearAllSession,
 } from "./token.service";
 
-const BASE_URL = AppConfig.API_BASE_URL;
+const BASE_URL =
+  __DEV__ && Platform.OS === "web"
+    ? AppConfig.WEB_DEV_API_PROXY_URL
+    : AppConfig.API_BASE_URL;
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -25,6 +29,31 @@ interface RequestOptions {
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
+function shouldSendNgrokBypassHeader(url: string): boolean {
+  return url.includes("ngrok-free.app") || url.includes("ngrok.app") || url.includes("ngrok.io");
+}
+
+function buildRequestHeaders(
+  url: string,
+  options: { body?: unknown; headers?: Record<string, string>; token?: string | null } = {}
+): Record<string, string> {
+  const requestHeaders: Record<string, string> = { ...options.headers };
+
+  if (options.body !== undefined) {
+    requestHeaders["Content-Type"] = requestHeaders["Content-Type"] ?? "application/json";
+  }
+
+  if (shouldSendNgrokBypassHeader(url)) {
+    requestHeaders["ngrok-skip-browser-warning"] = "true";
+  }
+
+  if (options.token) {
+    requestHeaders["Authorization"] = `Bearer ${options.token}`;
+  }
+
+  return requestHeaders;
+}
+
 /**
  * Attempt to refresh the access token using the stored refresh token.
  * Returns true if refresh succeeded.
@@ -36,12 +65,10 @@ async function refreshAccessToken(): Promise<boolean> {
 
     if (!session_id || !refresh_token) return false;
 
-    const response = await fetch(`${BASE_URL}/auth/refresh`, {
+    const url = `${BASE_URL}/auth/refresh`;
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
+      headers: buildRequestHeaders(url, { body: { session_id, refresh_token } }),
       body: JSON.stringify({ session_id, refresh_token }),
     });
 
@@ -69,23 +96,13 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { method = "GET", body, headers = {}, skipAuth = false } = options;
 
-  // Build headers
-  const requestHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-    // ngrok requires this header to skip the browser warning page
-    "ngrok-skip-browser-warning": "true",
-    ...headers,
-  };
-
-  // Attach JWT if available and not skipped
+  const url = `${BASE_URL}${endpoint}`;
+  let token: string | null = null;
   if (!skipAuth) {
-    const token = await getAccessToken();
-    if (token) {
-      requestHeaders["Authorization"] = `Bearer ${token}`;
-    }
+    token = await getAccessToken();
   }
 
-  const url = `${BASE_URL}${endpoint}`;
+  const requestHeaders = buildRequestHeaders(url, { body, headers, token });
   if (__DEV__) console.log(`[API] ${method} ${url}`, body ? JSON.stringify(body) : '');
 
   let response = await fetch(url, {
