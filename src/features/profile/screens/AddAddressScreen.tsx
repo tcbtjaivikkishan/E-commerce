@@ -212,9 +212,7 @@ export default function AddAddressScreen() {
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [pincode, setPincode] = useState("");
-  const [receiverName, setReceiverName] = useState("");
-  const [receiverPhone, setReceiverPhone] = useState("");
-  const [label, setLabel] = useState("");
+
   const [saving, setSaving] = useState(false);
 
   // When state changes, clear city
@@ -241,24 +239,15 @@ export default function AddAddressScreen() {
       Alert.alert("Required", "Please enter a valid 6-digit pin code");
       return;
     }
-    if (!receiverName.trim()) {
-      Alert.alert("Required", "Receiver's name is required");
-      return;
-    }
-    if (!receiverPhone.trim() || receiverPhone.trim().length < 10) {
-      Alert.alert("Required", "Please enter a valid 10-digit phone number");
-      return;
-    }
+
 
     const addressData = {
-      label: label.trim() || "Home",
+      label: "Home",
       line1: line1.trim(),
       line2: line2.trim(),
       city: city.trim(),
       state: state.trim(),
       pincode: pincode.trim(),
-      receiver_name: receiverName.trim(),
-      receiver_phone: receiverPhone.trim(),
     };
 
     setSaving(true);
@@ -359,6 +348,16 @@ export default function AddAddressScreen() {
                 onChangeText={setLine2}
               />
 
+              <TextInput
+                style={styles.input}
+                placeholder="Pin code"
+                placeholderTextColor="#999"
+                value={pincode}
+                onChangeText={setPincode}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+
               {/* State Picker — full width */}
               <SearchablePicker
                 value={state}
@@ -374,49 +373,9 @@ export default function AddAddressScreen() {
                 options={cityOptions}
                 placeholder="City*"
               />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Pin code"
-                placeholderTextColor="#999"
-                value={pincode}
-                onChangeText={setPincode}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
             </View>
 
-            {/* Contact Details Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionIcon}>📞</Text>
-                <Text style={styles.sectionTitle}>Contact details</Text>
-              </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Receiver's name*"
-                placeholderTextColor="#999"
-                value={receiverName}
-                onChangeText={setReceiverName}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Receiver's Phone number*"
-                placeholderTextColor="#999"
-                value={receiverPhone}
-                onChangeText={setReceiverPhone}
-                keyboardType="phone-pad"
-                maxLength={10}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Save Address (optional)"
-                placeholderTextColor="#999"
-                value={label}
-                onChangeText={setLabel}
-              />
-            </View>
           </ScrollView>
 
           {/* Save Button */}

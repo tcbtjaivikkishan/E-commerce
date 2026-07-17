@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 
+
 import BannerCarousel from "../../../shared/components/BannerCarousel";
 import Header from "../../../shared/components/Header";
 import { useCart } from "../../cart/hooks/useCart";

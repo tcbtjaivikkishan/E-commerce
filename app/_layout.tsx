@@ -30,6 +30,8 @@ export default function RootLayout() {
       <Provider store={store}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="landing" />
+          <Stack.Screen name="complete-profile" />
           <Stack.Screen name="(tabs)" />
         </Stack>
       </Provider>

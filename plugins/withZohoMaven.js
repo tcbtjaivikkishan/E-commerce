@@ -2,15 +2,21 @@
 // Expo config plugin to inject Zoho maven repository into build.gradle
 const { withProjectBuildGradle } = require("expo/config-plugins");
 
+const ZOHO_MAVEN_REPO = "maven { url 'https://maven.zohodl.com' }";
+
+function hasZohoRepoInAllprojects(contents) {
+  const allprojectsBlock = contents.match(/allprojects\s*\{[\s\S]*?\n\}/);
+  return allprojectsBlock && allprojectsBlock[0].includes("maven.zohodl.com");
+}
+
 module.exports = function withZohoMaven(config) {
   return withProjectBuildGradle(config, (mod) => {
     if (mod.modResults.language === "groovy") {
       const contents = mod.modResults.contents;
-      // Add Zoho maven repo if not already present
-      if (!contents.includes("maven.zohodl.com")) {
+      if (!hasZohoRepoInAllprojects(contents)) {
         mod.modResults.contents = contents.replace(
-          /mavenCentral\(\)\n(\s*)\}/,
-          `mavenCentral()\n$1    maven { url 'https://maven.zohodl.com' }\n$1}`
+          /(allprojects\s*\{\s*repositories\s*\{)/,
+          `$1\n    ${ZOHO_MAVEN_REPO}`
         );
       }
     }

@@ -16,6 +16,7 @@ type BootStatus = "loading" | "authenticated" | "unauthenticated";
 
 export default function BootScreen() {
   const [status, setStatus] = useState<BootStatus>("loading");
+  const [hasName, setHasName] = useState(false);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function BootScreen() {
               addresses: user.addresses ?? [],
             })
           );
+          setHasName(!!user.name && user.name.trim().length > 0);
           setStatus("authenticated");
         } else {
           setStatus("unauthenticated");
@@ -79,7 +81,11 @@ export default function BootScreen() {
 
   // Route based on session status
   if (status === "authenticated") {
-    return <Redirect href="/(tabs)/home" />;
+    // First-time user (no name) → collect name before landing
+    if (!hasName) {
+      return <Redirect href="/complete-profile" />;
+    }
+    return <Redirect href="/landing" />;
   }
 
   return <Redirect href="/login" />;

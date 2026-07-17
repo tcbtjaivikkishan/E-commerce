@@ -63,7 +63,7 @@ export default function ProfileScreen() {
           <Text style={styles.avatarIcon}>👤</Text>
         </View>
 
-        <Text style={styles.headerName}>Your account</Text>
+        <Text style={styles.headerName}>{user.name || "Your account"}</Text>
         <Text style={styles.headerPhone}>
           {user.phone || "Not logged in"}
         </Text>

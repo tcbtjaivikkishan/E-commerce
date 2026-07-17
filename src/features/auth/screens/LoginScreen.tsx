@@ -156,8 +156,10 @@ export default function LoginScreen() {
             addresses: user.addresses,
           })
         );
-
-        const redirect = (params.redirect as string) || "/home";
+        // First-time user (no name) → collect name before landing
+        const isFirstTime = !user.name || !user.name.trim();
+        const defaultDest = isFirstTime ? "/complete-profile" : "/landing";
+        const redirect = (params.redirect as string) || defaultDest;
         router.replace(redirect as any);
       } catch (err: any) {
         const msg = err?.message || "Invalid OTP";
