@@ -4,21 +4,19 @@ import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { UserAddress } from "../../auth/types/auth.types";
-import { removeAddress, setAddresses, updateAddress } from "../../auth/store/userSlice";
 import { useAppDispatch, useAppSelector } from "../../../shared/hooks/useRedux";
+import { removeAddress, setAddresses, updateAddress } from "../../auth/store/userSlice";
+import type { UserAddress } from "../../auth/types/auth.types";
 import { deleteUserAddress, updateUserAddress } from "../services/user.api";
 
 const GREEN = "#196F1B";
@@ -27,45 +25,89 @@ const RED = "#D9534F";
 const RED_LIGHT = "#FDECEA";
 
 // ─── Indian State / City data ─────────────────────────────────────────────────
+// ─── Complete Indian Regions List (28 States + 8 Union Territories) ──────────
 const INDIAN_STATES = [
-  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
-  "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
-  "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
-  "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura",
-  "Uttar Pradesh","Uttarakhand","West Bengal","Jammu & Kashmir",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir", // Standardized to "and" for flawless Zoho function mapping
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
 ];
 
+// ─── Comprehensive Cities By State Mapping ──────────────────────────────────
 const CITIES_BY_STATE: Record<string, string[]> = {
-  "Andhra Pradesh": ["Visakhapatnam","Vijayawada","Guntur","Nellore","Kurnool","Tirupati","Rajahmundry","Kadapa","Anantapur","Eluru"],
-  "Arunachal Pradesh": ["Itanagar","Naharlagun","Pasighat","Tawang","Ziro","Along","Bomdila"],
-  "Assam": ["Guwahati","Silchar","Dibrugarh","Jorhat","Nagaon","Tinsukia","Tezpur","Dispur"],
-  "Bihar": ["Patna","Gaya","Bhagalpur","Muzaffarpur","Purnia","Darbhanga","Bihar Sharif","Arrah"],
-  "Chhattisgarh": ["Raipur","Bhilai","Bilaspur","Korba","Durg","Rajnandgaon","Jagdalpur"],
-  "Goa": ["Panaji","Margao","Vasco da Gama","Mapusa","Ponda"],
-  "Gujarat": ["Ahmedabad","Surat","Vadodara","Rajkot","Bhavnagar","Jamnagar","Gandhinagar","Junagadh"],
-  "Haryana": ["Faridabad","Gurgaon","Panipat","Ambala","Rohtak","Hisar","Karnal","Sonipat"],
-  "Himachal Pradesh": ["Shimla","Dharamshala","Solan","Mandi","Kullu","Baddi"],
-  "Jharkhand": ["Ranchi","Jamshedpur","Dhanbad","Bokaro","Hazaribagh"],
-  "Karnataka": ["Bengaluru","Mysuru","Hubballi","Mangaluru","Belagavi","Davanagere"],
-  "Kerala": ["Thiruvananthapuram","Kochi","Kozhikode","Thrissur","Kollam","Palakkad"],
-  "Madhya Pradesh": ["Bhopal","Indore","Jabalpur","Gwalior","Ujjain","Sagar"],
-  "Maharashtra": ["Mumbai","Pune","Nagpur","Nashik","Aurangabad","Solapur","Thane"],
-  "Manipur": ["Imphal","Thoubal","Bishnupur","Churachandpur"],
-  "Meghalaya": ["Shillong","Tura","Jowai"],
-  "Mizoram": ["Aizawl","Lunglei","Saiha","Champhai"],
-  "Nagaland": ["Kohima","Dimapur","Mokokchung"],
-  "Odisha": ["Bhubaneswar","Cuttack","Rourkela","Berhampur","Sambalpur","Puri"],
-  "Punjab": ["Ludhiana","Amritsar","Jalandhar","Patiala","Bathinda","Mohali"],
-  "Rajasthan": ["Jaipur","Jodhpur","Kota","Bikaner","Ajmer","Udaipur"],
-  "Sikkim": ["Gangtok","Namchi","Gyalshing","Mangan"],
-  "Tamil Nadu": ["Chennai","Coimbatore","Madurai","Tiruchirappalli","Salem"],
-  "Telangana": ["Hyderabad","Warangal","Nizamabad","Karimnagar","Khammam"],
-  "Tripura": ["Agartala","Dharmanagar","Udaipur"],
-  "Uttar Pradesh": ["Lucknow","Kanpur","Varanasi","Agra","Meerut","Prayagraj","Noida"],
-  "Uttarakhand": ["Dehradun","Haridwar","Roorkee","Haldwani","Rishikesh"],
-  "West Bengal": ["Kolkata","Howrah","Durgapur","Asansol","Siliguri"],
-  "Jammu & Kashmir": ["Srinagar","Jammu","Anantnag","Baramulla","Udhampur"],
+  // ─── 28 States ──────────────────────────────────────────────────────────────
+  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Tirupati", "Rajahmundry", "Kadapa", "Anantapur", "Eluru"],
+  "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tawang", "Ziro", "Along", "Bomdila"],
+  "Assam": ["Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon", "Tinsukia", "Tezpur", "Dispur"],
+  "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Purnia", "Darbhanga", "Bihar Sharif", "Arrah"],
+  "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Korba", "Durg", "Rajnandgaon", "Jagdalpur"],
+  "Goa": ["Panaji", "Margao", "Vasco da Gama", "Mapusa", "Ponda"],
+  "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar", "Junagadh"],
+  "Haryana": ["Faridabad", "Gurgaon", "Panipat", "Ambala", "Rohtak", "Hisar", "Karnal", "Sonipat"],
+  "Himachal Pradesh": ["Shimla", "Dharamshala", "Solan", "Mandi", "Kullu", "Baddi"],
+  "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro", "Hazaribagh"],
+  "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Mangaluru", "Belagavi", "Davanagere"],
+  "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Palakkad"],
+  "Madhya Pradesh": ["Bhopal", "Indore", "Jabalpur", "Gwalior", "Ujjain", "Sagar"],
+  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Solapur", "Thane"],
+  "Manipur": ["Imphal", "Thoubal", "Bishnupur", "Churachandpur"],
+  "Meghalaya": ["Shillong", "Tura", "Jowai"],
+  "Mizoram": ["Aizawl", "Lunglei", "Saiha", "Champhai"],
+  "Nagaland": ["Kohima", "Dimapur", "Mokokchung"],
+  "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Berhampur", "Sambalpur", "Puri"],
+  "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda", "Mohali"],
+  "Rajasthan": ["Jaipur", "Jodhpur", "Kota", "Bikaner", "Ajmer", "Udaipur"],
+  "Sikkim": ["Gangtok", "Namchi", "Gyalshing", "Mangan"],
+  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"],
+  "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam"],
+  "Tripura": ["Agartala", "Dharmanagar", "Udaipur"],
+  "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Meerut", "Prayagraj", "Noida"],
+  "Uttarakhand": ["Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rishikesh"],
+  "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri"],
+
+  // ─── 8 Union Territories (Keys perfectly match the master array) ────────────
+  "Andaman and Nicobar Islands": ["Port Blair", "Garacharma", "Bambooflat"],
+  "Chandigarh": ["Chandigarh"],
+  "Dadra and Nagar Haveli and Daman and Diu": ["Daman", "Diu", "Silvassa"],
+  "Delhi": ["New Delhi", "Dwarka", "Rohini", "Najafgarh", "Delhi Cantonment"],
+  "Jammu and Kashmir": ["Srinagar", "Jammu", "Anantnag", "Baramulla", "Udhampur"],
+  "Ladakh": ["Leh", "Kargil"],
+  "Lakshadweep": ["Kavaratti", "Agatti", "Amini", "Minicoy"],
+  "Puducherry": ["Puducherry", "Karaikal", "Mahe", "Yanam"]
 };
+
 
 // ─── Searchable Picker ────────────────────────────────────────────────────────
 interface SearchablePickerProps {

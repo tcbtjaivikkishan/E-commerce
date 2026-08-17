@@ -2,7 +2,7 @@
   "expo": {
     "name": "TCBT",
     "slug": "client",
-    "version": "1.2.0",
+    "version": "1.2.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "client",
@@ -22,7 +22,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.tcbt.myapp",
       "minSdkVersion": 26,
-      "versionCode": 2
+      "versionCode": 4
     },
     "web": {
       "output": "static",

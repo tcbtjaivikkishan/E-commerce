@@ -23,6 +23,7 @@ const GREEN = "#196F1B";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const INDIAN_STATES = [
+  // ─── 28 States ──────────────────────────────────────────────────────────────
   "Andhra Pradesh",
   "Arunachal Pradesh",
   "Assam",
@@ -51,10 +52,21 @@ const INDIAN_STATES = [
   "Uttar Pradesh",
   "Uttarakhand",
   "West Bengal",
-  "Jammu & Kashmir",
+
+  // ─── 8 Union Territories (Matching function dictionary) ────────────────────
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir", // Updated from "&" to "and" to prevent runtime mismatch
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
 ];
 
+
 const CITIES_BY_STATE: Record<string, string[]> = {
+  // ─── 28 States ──────────────────────────────────────────────────────────────
   "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Tirupati", "Rajahmundry", "Kadapa", "Anantapur", "Eluru"],
   "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tawang", "Ziro", "Along", "Bomdila"],
   "Assam": ["Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon", "Tinsukia", "Tezpur", "Bongaigaon", "Dispur"],
@@ -83,10 +95,100 @@ const CITIES_BY_STATE: Record<string, string[]> = {
   "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Meerut", "Prayagraj", "Ghaziabad", "Noida", "Bareilly", "Aligarh"],
   "Uttarakhand": ["Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rudrapur", "Kashipur", "Rishikesh", "Nainital", "Mussoorie"],
   "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri", "Maheshtala", "Rajpur Sonarpur", "South Dumdum", "Bally", "Bardhaman"],
-  "Jammu & Kashmir": ["Srinagar", "Jammu", "Anantnag", "Sopore", "Baramulla", "Udhampur", "Kathua", "Rajouri", "Punch"],
+
+  // ─── 8 Union Territories ───────────────────────────────────────────────────
+  "Andaman and Nicobar Islands": ["Port Blair", "Garacharma", "Bambooflat"],
+  "Chandigarh": ["Chandigarh"],
+  "Dadra and Nagar Haveli and Daman and Diu": ["Daman", "Diu", "Silvassa"],
+  "Delhi": ["New Delhi", "Dwarka", "Rohini", "Najafgarh", "Narendra", "Delhi Cantonment"],
+  "Jammu and Kashmir": ["Srinagar", "Jammu", "Anantnag", "Sopore", "Baramulla", "Udhampur", "Kathua", "Rajouri", "Punch"], // Name standardized to "and"
+  "Ladakh": ["Leh", "Kargil"],
+  "Lakshadweep": ["Kavaratti", "Agatti", "Amini", "Andrott", "Minicoy"],
+  "Puducherry": ["Puducherry", "Karaikal", "Ozhukarai", "Mahe", "Yanam"]
 };
 
-// ─── Generic Searchable Picker ────────────────────────────────────────────────
+
+// ─── Select-only Picker (no keyboard — tap to pick) ───────────────────────────
+interface SelectPickerProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  placeholder: string;
+  disabled?: boolean;
+}
+
+function SelectPicker({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled = false,
+}: SelectPickerProps) {
+  const [open, setOpen] = useState(false);
+
+  const select = (item: string) => {
+    onChange(item);
+    setOpen(false);
+  };
+
+  const toggleOpen = () => {
+    if (disabled) return;
+    setOpen((prev) => !prev);
+  };
+
+  return (
+    <View style={picker.wrapper}>
+      {/* Display row — shows selected value or placeholder */}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={toggleOpen}
+        style={[
+          picker.inputRow,
+          open && picker.inputRowOpen,
+          disabled && picker.inputRowDisabled,
+        ]}
+      >
+        <Text style={[picker.displayText, !value && picker.placeholderText]}>
+          {value || placeholder}
+        </Text>
+        <Text style={picker.chevron}>{open ? "▲" : "▼"}</Text>
+      </TouchableOpacity>
+
+      {/* Inline scrollable list */}
+      {open && (
+        <ScrollView
+          style={picker.listContainer}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {options.map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={[picker.item, item === value && picker.itemSelected]}
+              onPress={() => select(item)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  picker.itemText,
+                  item === value && picker.itemTextSelected,
+                ]}
+              >
+                {item}
+              </Text>
+              {item === value && (
+                <Text style={picker.checkmark}>✓</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+// ─── Generic Searchable Picker (used for City) ────────────────────────────────
 interface SearchablePickerProps {
   value: string;
   onChange: (val: string) => void;
@@ -161,13 +263,12 @@ function SearchablePicker({
           autoCorrect={false}
           autoCapitalize="words"
           editable={!disabled}
-          // prevent keyboard from auto-opening on mount
           showSoftInputOnFocus={true}
         />
         <Text style={picker.chevron}>{open ? "▲" : "▼"}</Text>
       </TouchableOpacity>
 
-      {/* Inline list — no absolute positioning, no clipping */}
+      {/* Inline list */}
       {open && (
         <View style={picker.listContainer}>
           {filtered.length === 0 ? (
@@ -257,7 +358,7 @@ export default function AddAddressScreen() {
         const updatedAddresses = await addUserAddress(userId, addressData);
         console.log('[ADD_ADDR] API response:', JSON.stringify(updatedAddresses));
         console.log('[ADD_ADDR] Is array?', Array.isArray(updatedAddresses), 'count:', updatedAddresses?.length);
-        
+
         // Replace all addresses in Redux with the backend's version (which has _ids)
         if (Array.isArray(updatedAddresses) && updatedAddresses.length > 0) {
           // Verify _ids are present
@@ -358,8 +459,8 @@ export default function AddAddressScreen() {
                 maxLength={6}
               />
 
-              {/* State Picker — full width */}
-              <SearchablePicker
+              {/* State Picker — select-only list, no keyboard input */}
+              <SelectPicker
                 value={state}
                 onChange={handleStateChange}
                 options={INDIAN_STATES}
@@ -574,6 +675,16 @@ const picker = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
+    color: "#999",
+  },
+  // SelectPicker-specific
+  displayText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#333",
+    paddingVertical: 12,
+  },
+  placeholderText: {
     color: "#999",
   },
 });
